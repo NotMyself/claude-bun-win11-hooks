@@ -583,7 +583,7 @@
       },
       methods: {
         entryKey(entry) {
-          return \`\${entry.timestamp}-\${entry.event}-\${entry.session_id}\`;
+          return `${entry.timestamp}-${entry.event}-${entry.session_id}`;
         },
         scrollToBottom() {
           if (!this.autoScroll || !this.$refs.logList) return;
