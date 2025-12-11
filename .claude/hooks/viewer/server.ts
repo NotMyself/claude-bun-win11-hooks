@@ -125,7 +125,16 @@ async function handleRequest(request: Request): Promise<Response> {
     return handleSSE(request);
   }
 
-  // TODO: API endpoint will be added in feature 06-server-api
+  // Route: GET /api/entries -> JSON array of all entries
+  if (path === "/api/entries" && request.method === "GET") {
+    const entries = watcher.getAllEntries();
+    return new Response(JSON.stringify(entries), {
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
+    });
+  }
 
   // 404 for unknown routes
   return new Response("Not Found", { status: 404 });
