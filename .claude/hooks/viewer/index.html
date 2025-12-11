@@ -611,10 +611,10 @@
       methods: {
         cleanupPaths(json) {
           // Replace Windows home directory with ~
-          const homeDir = 'C:\\\\Users\\\\BobbyJohnson';
-          json = json.replace(new RegExp(homeDir, 'g'), '~');
+          // JSON.stringify escapes backslashes, so C:\Users becomes C:\\Users in the string
+          json = json.replace(/C:\\\\Users\\\\BobbyJohnson/g, '~');
 
-          // Convert double backslashes to forward slashes
+          // Convert remaining escaped backslashes to forward slashes for readability
           json = json.replace(/\\\\/g, '/');
 
           return json;

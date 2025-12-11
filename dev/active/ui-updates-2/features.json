@@ -7,7 +7,7 @@
       "title": "Fix Copy Button Dark Mode Visibility",
       "description": "Add text color to copy button so it's visible in dark mode",
       "layer": 1,
-      "status": "pending",
+      "status": "completed",
       "dependencies": [],
       "files": [".claude/hooks/viewer/styles/theme.css"],
       "acceptance_criteria": [
@@ -21,7 +21,7 @@
       "title": "Clean Up JSON Display Paths",
       "description": "Remove escape characters and use relative paths with ~ for home directory in JSON display",
       "layer": 2,
-      "status": "pending",
+      "status": "completed",
       "dependencies": [],
       "files": [".claude/hooks/viewer/index.html"],
       "acceptance_criteria": [
@@ -36,7 +36,7 @@
       "title": "Move Session Dropdown Below Search",
       "description": "Reorder filter bar so session dropdown appears below search box",
       "layer": 1,
-      "status": "pending",
+      "status": "completed",
       "dependencies": [],
       "files": [".claude/hooks/viewer/index.html"],
       "acceptance_criteria": [
@@ -50,7 +50,7 @@
       "title": "Fix Footer Always Visible",
       "description": "Use flexbox layout to ensure footer stays at bottom of viewport",
       "layer": 1,
-      "status": "pending",
+      "status": "completed",
       "dependencies": [],
       "files": [".claude/hooks/viewer/styles/theme.css"],
       "acceptance_criteria": [
@@ -65,7 +65,7 @@
       "title": "E2E Validation with Playwright",
       "description": "Verify all UI changes work correctly using Playwright browser automation",
       "layer": 3,
-      "status": "pending",
+      "status": "completed",
       "dependencies": ["UI-001", "UI-002", "UI-003", "UI-004"],
       "files": [],
       "acceptance_criteria": [
