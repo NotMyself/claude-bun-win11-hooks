@@ -247,8 +247,88 @@
       },
     });
 
+    // ===== LogEntry Component =====
+    app.component('log-entry', {
+      props: {
+        entry: {
+          type: Object,
+          required: true,
+        },
+      },
+      template: `
+        <div class="card log-entry" :class="{ expanded: isExpanded }">
+          <div class="card-header" @click="toggle">
+            <span class="timestamp">{{ formatTime(entry.timestamp) }}</span>
+            <event-badge :event="entry.event"></event-badge>
+            <span class="session-id" :title="entry.session_id">
+              {{ truncateId(entry.session_id) }}
+            </span>
+            <span class="expand-icon">{{ isExpanded ? '▼' : '▶' }}</span>
+          </div>
+
+          <div v-if="isExpanded" class="card-content">
+            <div class="json-header">
+              <span>Data</span>
+              <button class="copy-btn" @click.stop="copyJson">
+                {{ copied ? '✓ Copied' : '📋 Copy' }}
+              </button>
+            </div>
+            <pre class="json-view">{{ formattedJson }}</pre>
+          </div>
+        </div>
+      `,
+      data() {
+        return {
+          isExpanded: false,
+          copied: false,
+        };
+      },
+      computed: {
+        formattedJson() {
+          try {
+            return JSON.stringify(this.entry.data, null, 2);
+          } catch {
+            return String(this.entry.data);
+          }
+        },
+      },
+      methods: {
+        toggle() {
+          this.isExpanded = !this.isExpanded;
+        },
+        formatTime(iso) {
+          try {
+            const date = new Date(iso);
+            return date.toLocaleTimeString('en-US', {
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+              hour12: false,
+            });
+          } catch {
+            return iso;
+          }
+        },
+        truncateId(id) {
+          if (!id || id.length <= 12) return id;
+          return id.substring(0, 8) + '...';
+        },
+        async copyJson() {
+          try {
+            const fullEntry = JSON.stringify(this.entry, null, 2);
+            await navigator.clipboard.writeText(fullEntry);
+            this.copied = true;
+            setTimeout(() => {
+              this.copied = false;
+            }, 2000);
+          } catch (err) {
+            console.error('Failed to copy:', err);
+          }
+        },
+      },
+    });
+
     // Components to be registered in subsequent features:
-    // - 12-logentry: app.component('log-entry', {...})
     // - 13-logviewer: app.component('log-viewer', {...})
     // - 14-tabcontainer: app.component('tab-container', {...})
 

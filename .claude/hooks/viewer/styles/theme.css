@@ -325,3 +325,27 @@ body {
   min-width: 150px;
   max-height: 120px;
 }
+
+/* ===== LogEntry Styles ===== */
+.log-entry .card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.log-entry .expand-icon {
+  margin-left: auto;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+
+.log-entry .json-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.log-entry.expanded {
+  border-color: var(--primary);
+}
