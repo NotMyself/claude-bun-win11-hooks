@@ -4,7 +4,10 @@
   "type": "module",
   "private": true,
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "vitest": "^2.0.0",
+    "@vue/test-utils": "^2.4.0",
+    "happy-dom": "^15.0.0"
   },
   "peerDependencies": {
     "typescript": "^5"
