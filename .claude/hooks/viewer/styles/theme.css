@@ -414,3 +414,58 @@ body {
   flex: 1;
   min-height: 0;
 }
+
+/* ===== JSON Syntax Highlighting ===== */
+.json-content {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  line-height: 1.4;
+  background: var(--bg-secondary);
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Light theme colors (VS Code Light+) */
+.json-key {
+  color: #0451a5;
+}
+
+.json-string {
+  color: #a31515;
+}
+
+.json-number {
+  color: #098658;
+}
+
+.json-boolean {
+  color: #0000ff;
+}
+
+.json-null {
+  color: #0000ff;
+}
+
+/* Dark theme colors (VS Code Dark+) */
+[data-theme="dark"] .json-key {
+  color: #9cdcfe;
+}
+
+[data-theme="dark"] .json-string {
+  color: #ce9178;
+}
+
+[data-theme="dark"] .json-number {
+  color: #b5cea8;
+}
+
+[data-theme="dark"] .json-boolean {
+  color: #569cd6;
+}
+
+[data-theme="dark"] .json-null {
+  color: #569cd6;
+}

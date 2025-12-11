@@ -486,7 +486,7 @@
                 {{ copied ? '✓ Copied' : '📋 Copy' }}
               </button>
             </div>
-            <pre class="json-view">{{ formattedJson }}</pre>
+            <pre class="json-content" v-html="highlightedJson"></pre>
           </div>
         </div>
       `,
@@ -504,8 +504,38 @@
             return String(this.entry.data);
           }
         },
+        highlightedJson() {
+          return this.syntaxHighlight(this.entry.data);
+        },
       },
       methods: {
+        syntaxHighlight(json) {
+          if (typeof json !== 'string') {
+            json = JSON.stringify(json, null, 2);
+          }
+          // Escape HTML entities
+          json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+          // Apply syntax highlighting
+          return json.replace(
+            /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+            function (match) {
+              let cls = 'json-number';
+              if (/^"/.test(match)) {
+                if (/:$/.test(match)) {
+                  cls = 'json-key';
+                } else {
+                  cls = 'json-string';
+                }
+              } else if (/true|false/.test(match)) {
+                cls = 'json-boolean';
+              } else if (/null/.test(match)) {
+                cls = 'json-null';
+              }
+              return '<span class="' + cls + '">' + match + '</span>';
+            }
+          );
+        },
         toggle() {
           this.isExpanded = !this.isExpanded;
         },
