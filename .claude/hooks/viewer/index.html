@@ -93,9 +93,29 @@
       },
     });
 
-    // ===== Component Registration (placeholders) =====
-    // Components will be registered in subsequent features:
-    // - 09-eventbadge: app.component('event-badge', {...})
+    // ===== Component Registration =====
+
+    // ===== EventBadge Component =====
+    app.component('event-badge', {
+      props: {
+        event: {
+          type: String,
+          required: true,
+        },
+      },
+      template: `
+        <span class="event-badge" :class="badgeClass">
+          {{ event }}
+        </span>
+      `,
+      computed: {
+        badgeClass() {
+          return 'badge-' + this.event;
+        },
+      },
+    });
+
+    // Components to be registered in subsequent features:
     // - 10-themetoggle: app.component('theme-toggle', {...})
     // - 11-filterbar: app.component('filter-bar', {...})
     // - 12-logentry: app.component('log-entry', {...})
