@@ -603,10 +603,22 @@
           }
         },
         highlightedJson() {
-          return this.syntaxHighlight(this.entry.data);
+          let json = JSON.stringify(this.entry.data, null, 2);
+          json = this.cleanupPaths(json);
+          return this.syntaxHighlight(json);
         },
       },
       methods: {
+        cleanupPaths(json) {
+          // Replace Windows home directory with ~
+          const homeDir = 'C:\\\\Users\\\\BobbyJohnson';
+          json = json.replace(new RegExp(homeDir, 'g'), '~');
+
+          // Convert double backslashes to forward slashes
+          json = json.replace(/\\\\/g, '/');
+
+          return json;
+        },
         syntaxHighlight(json) {
           if (typeof json !== 'string') {
             json = JSON.stringify(json, null, 2);
