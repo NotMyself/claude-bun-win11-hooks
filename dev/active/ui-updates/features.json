@@ -8,7 +8,7 @@
       "title": "Theme Toggle Text Contrast Fix",
       "description": "Fix theme toggle button text visibility in dark mode by adding proper color variables",
       "layer": 1,
-      "status": "pending",
+      "status": "completed",
       "files": [
         ".claude/hooks/viewer/styles/theme.css"
       ],
@@ -24,7 +24,7 @@
       "title": "Reverse Log Entry Order",
       "description": "Display log entries in reverse chronological order (newest first) and scroll to top for new entries",
       "layer": 1,
-      "status": "pending",
+      "status": "completed",
       "files": [
         ".claude/hooks/viewer/index.html"
       ],
@@ -40,7 +40,7 @@
       "title": "Event-Specific Collapsed Display",
       "description": "Add getSummary() method to show contextual summaries for each event type when collapsed",
       "layer": 2,
-      "status": "pending",
+      "status": "completed",
       "files": [
         ".claude/hooks/viewer/index.html",
         ".claude/hooks/viewer/styles/theme.css"
@@ -67,7 +67,7 @@
       "title": "JSON Syntax Highlighting",
       "description": "Add syntax highlighting for JSON data in expanded log entries",
       "layer": 2,
-      "status": "pending",
+      "status": "completed",
       "files": [
         ".claude/hooks/viewer/index.html",
         ".claude/hooks/viewer/styles/theme.css"
@@ -89,7 +89,7 @@
       "title": "Dropdown Checklist for Event Filter",
       "description": "Replace multi-select dropdown with a custom dropdown checklist component for filtering events",
       "layer": 3,
-      "status": "pending",
+      "status": "completed",
       "files": [
         ".claude/hooks/viewer/index.html",
         ".claude/hooks/viewer/styles/theme.css"
@@ -114,7 +114,7 @@
       "title": "Toolbar Redesign",
       "description": "Restructure filter-bar to two-row layout with session selector on top row",
       "layer": 3,
-      "status": "pending",
+      "status": "completed",
       "files": [
         ".claude/hooks/viewer/index.html",
         ".claude/hooks/viewer/styles/theme.css"
@@ -133,7 +133,7 @@
       "title": "Unit Tests for New Features",
       "description": "Add unit tests for new functionality",
       "layer": 4,
-      "status": "pending",
+      "status": "completed",
       "files": [
         ".claude/hooks/viewer/__tests__/components.test.ts"
       ],
@@ -151,7 +151,7 @@
       "title": "E2E Validation with Playwright",
       "description": "Final validation of all UI changes using Playwright browser automation",
       "layer": 5,
-      "status": "pending",
+      "status": "completed",
       "files": [],
       "acceptance_criteria": [
         "Theme toggle works and text is visible in both modes",
