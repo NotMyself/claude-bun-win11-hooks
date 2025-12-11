@@ -328,8 +328,128 @@
       },
     });
 
+    // ===== LogViewer Component =====
+    app.component('log-viewer', {
+      props: {
+        entries: {
+          type: Array,
+          default: () => [],
+        },
+      },
+      template: `
+        <div class="log-viewer">
+          <filter-bar
+            v-model="filters"
+            :sessions="uniqueSessions"
+          ></filter-bar>
+
+          <div class="log-viewer-controls">
+            <label class="auto-scroll-toggle">
+              <input type="checkbox" v-model="autoScroll" />
+              Auto-scroll to new entries
+            </label>
+            <span class="entry-count">
+              Showing {{ filteredEntries.length }} of {{ entries.length }} entries
+            </span>
+          </div>
+
+          <div
+            v-if="filteredEntries.length === 0"
+            class="empty-state"
+          >
+            <h3>No entries found</h3>
+            <p v-if="hasFilters">Try adjusting your filters</p>
+            <p v-else>Waiting for log entries...</p>
+          </div>
+
+          <div
+            v-else
+            ref="logList"
+            class="log-list"
+          >
+            <log-entry
+              v-for="entry in filteredEntries"
+              :key="entryKey(entry)"
+              :entry="entry"
+            ></log-entry>
+          </div>
+        </div>
+      `,
+      data() {
+        return {
+          filters: {
+            search: '',
+            eventTypes: [],
+            sessionId: null,
+          },
+          autoScroll: true,
+        };
+      },
+      computed: {
+        uniqueSessions() {
+          const sessions = new Set(this.entries.map(e => e.session_id));
+          return Array.from(sessions).sort();
+        },
+        filteredEntries() {
+          return this.entries.filter(entry => {
+            // Search filter
+            if (this.filters.search) {
+              const searchLower = this.filters.search.toLowerCase();
+              const matchesSearch =
+                entry.event.toLowerCase().includes(searchLower) ||
+                entry.session_id.toLowerCase().includes(searchLower) ||
+                JSON.stringify(entry.data).toLowerCase().includes(searchLower);
+              if (!matchesSearch) return false;
+            }
+
+            // Event type filter
+            if (this.filters.eventTypes.length > 0) {
+              if (!this.filters.eventTypes.includes(entry.event)) {
+                return false;
+              }
+            }
+
+            // Session filter
+            if (this.filters.sessionId) {
+              if (entry.session_id !== this.filters.sessionId) {
+                return false;
+              }
+            }
+
+            return true;
+          });
+        },
+        hasFilters() {
+          return (
+            this.filters.search ||
+            this.filters.eventTypes.length > 0 ||
+            this.filters.sessionId
+          );
+        },
+      },
+      methods: {
+        entryKey(entry) {
+          return \`\${entry.timestamp}-\${entry.event}-\${entry.session_id}\`;
+        },
+        scrollToBottom() {
+          if (!this.autoScroll || !this.$refs.logList) return;
+          this.$nextTick(() => {
+            const list = this.$refs.logList;
+            list.scrollTop = list.scrollHeight;
+          });
+        },
+      },
+      watch: {
+        entries: {
+          handler() {
+            this.scrollToBottom();
+          },
+          deep: false,
+        },
+      },
+    });
+
     // Components to be registered in subsequent features:
-    // - 13-logviewer: app.component('log-viewer', {...})
     // - 14-tabcontainer: app.component('tab-container', {...})
 
     // Mount the app
