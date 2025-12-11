@@ -68,6 +68,7 @@ import {
 import { spawn } from "bun";
 import { join } from "path";
 import { log, readInput, writeOutput } from "./utils/logger.ts";
+import { CURRENT_SESSION_ENV } from "./viewer/config";
 
 /**
  * Viewer server configuration
@@ -97,12 +98,16 @@ async function isViewerRunning(): Promise<boolean> {
 /**
  * Start the viewer server as a detached background process
  */
-function startViewerServer(): void {
+function startViewerServer(session_id: string): void {
   const viewerPath = join(import.meta.dir, "viewer", "server.ts");
 
   try {
     // Spawn detached process that survives parent exit
     const proc = spawn(["bun", "run", viewerPath], {
+      env: {
+        ...process.env,
+        [CURRENT_SESSION_ENV]: session_id,
+      },
       stdout: "ignore",
       stderr: "ignore",
       stdin: "ignore",
@@ -138,7 +143,7 @@ async function main(): Promise<void> {
     const viewerRunning = await isViewerRunning();
 
     if (!viewerRunning) {
-      startViewerServer();
+      startViewerServer(input.session_id);
     } else {
       console.error(`\n🔍 Hook Viewer: ${VIEWER_URL}\n`);
     }
