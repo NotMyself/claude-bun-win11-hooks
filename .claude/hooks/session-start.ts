@@ -71,6 +71,23 @@ import { log, readInput, writeOutput } from "./utils/logger.ts";
 import { CURRENT_SESSION_ENV } from "./viewer/config";
 
 /**
+ * Convert Windows path to Docker-compatible path format.
+ * Transforms drive letters and backslashes for Docker volume mounts.
+ *
+ * @example
+ * toDockerPath("C:\\Users\\foo\\project") // "/C/Users/foo/project"
+ * toDockerPath("D:\\work\\repo") // "/D/work/repo"
+ *
+ * @param windowsPath - Windows-style path with backslashes
+ * @returns Docker-compatible path with forward slashes
+ */
+function toDockerPath(windowsPath: string): string {
+  return windowsPath
+    .replace(/\\/g, "/")
+    .replace(/^([A-Za-z]):/, "/$1");
+}
+
+/**
  * Viewer server configuration
  */
 const VIEWER_PORT = 3456;
