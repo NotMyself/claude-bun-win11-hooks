@@ -472,6 +472,7 @@
           <div class="card-header" @click="toggle">
             <span class="timestamp">{{ formatTime(entry.timestamp) }}</span>
             <event-badge :event="entry.event"></event-badge>
+            <span class="entry-summary">{{ getSummary(entry) }}</span>
             <span class="session-id" :title="entry.session_id">
               {{ truncateId(entry.session_id) }}
             </span>
@@ -524,6 +525,42 @@
         truncateId(id) {
           if (!id || id.length <= 12) return id;
           return id.substring(0, 8) + '...';
+        },
+        getSummary(entry) {
+          const data = entry.data || {};
+          const truncate = (str, len = 50) =>
+            str && str.length > len ? str.substring(0, len) + '...' : str;
+
+          switch (entry.event) {
+            case 'UserPromptSubmit':
+              return truncate(data.prompt || data.message || '');
+            case 'PreToolUse':
+              return data.tool_name || data.toolName || '';
+            case 'PostToolUse':
+              const toolName = data.tool_name || data.toolName || '';
+              const success = data.error ? '✗' : '✓';
+              return `${toolName} ${success}`;
+            case 'PostToolUseFailure':
+              const failedTool = data.tool_name || data.toolName || '';
+              const errorMsg = truncate(data.error || '', 30);
+              return `${failedTool} - ${errorMsg}`;
+            case 'SessionStart':
+            case 'SessionEnd':
+              return `Session: ${truncate(entry.session_id || '', 20)}`;
+            case 'SubagentStart':
+            case 'SubagentStop':
+              return data.subagent_type || data.type || '';
+            case 'Notification':
+              return truncate(data.message || data.notification || '');
+            case 'PermissionRequest':
+              return data.permission_type || data.permission || '';
+            case 'PreCompact':
+              return truncate(data.reason || 'Context compaction');
+            case 'Stop':
+              return truncate(data.reason || 'User interrupt');
+            default:
+              return '';
+          }
         },
         async copyJson() {
           try {
