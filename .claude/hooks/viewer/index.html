@@ -473,15 +473,6 @@
       emits: ['update:modelValue', 'update:selectedSession'],
       template: `
         <div class="filter-bar">
-          <div class="filter-row filter-row-top">
-            <session-selector
-              :sessions="sessions"
-              :current-session="currentSession"
-              :model-value="selectedSession"
-              @update:model-value="$emit('update:selectedSession', $event)"
-            />
-          </div>
-
           <div class="filter-row filter-row-main">
             <input
               type="text"
@@ -500,6 +491,15 @@
             <button class="clear-filters-btn" @click="clearFilters" :disabled="!hasFilters">
               Clear Filters
             </button>
+          </div>
+
+          <div class="filter-row filter-row-top">
+            <session-selector
+              :sessions="sessions"
+              :current-session="currentSession"
+              :model-value="selectedSession"
+              @update:model-value="$emit('update:selectedSession', $event)"
+            />
           </div>
         </div>
       `,
