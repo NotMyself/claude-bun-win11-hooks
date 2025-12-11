@@ -319,3 +319,9 @@ body {
     flex-wrap: wrap;
   }
 }
+
+/* ===== Event Multi-Select ===== */
+.event-select {
+  min-width: 150px;
+  max-height: 120px;
+}
