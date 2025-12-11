@@ -5,11 +5,11 @@ export default defineConfig({
     // Use happy-dom for browser-like environment
     environment: 'happy-dom',
 
-    // Setup file runs before all tests
-    setupFiles: ['./__tests__/setup.ts'],
+    // Setup file runs before all tests (relative to config file location)
+    setupFiles: ['./viewer/__tests__/setup.ts'],
 
-    // Include test files
-    include: ['__tests__/**/*.test.ts'],
+    // Include test files (relative to project root when config is loaded with --config)
+    include: ['viewer/__tests__/**/*.test.ts'],
 
     // Global test utilities
     globals: true,
@@ -18,8 +18,8 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      include: ['*.ts'],
-      exclude: ['__tests__/**', 'vitest.config.ts'],
+      include: ['viewer/*.ts'],
+      exclude: ['viewer/__tests__/**', 'viewer/vitest.config.ts'],
     },
   },
 });

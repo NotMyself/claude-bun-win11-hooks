@@ -3,11 +3,19 @@
   "module": "index.ts",
   "type": "module",
   "private": true,
+  "scripts": {
+    "viewer": "bun run viewer/server.ts",
+    "viewer:dev": "bun --watch run viewer/server.ts",
+    "test": "vitest --config viewer/vitest.config.ts",
+    "test:run": "vitest run --config viewer/vitest.config.ts",
+    "test:coverage": "vitest run --coverage --config viewer/vitest.config.ts"
+  },
   "devDependencies": {
     "@types/bun": "latest",
-    "vitest": "^2.0.0",
+    "@vitest/coverage-v8": "^2.0.0",
     "@vue/test-utils": "^2.4.0",
-    "happy-dom": "^15.0.0"
+    "happy-dom": "^15.0.0",
+    "vitest": "^2.0.0"
   },
   "peerDependencies": {
     "typescript": "^5"
