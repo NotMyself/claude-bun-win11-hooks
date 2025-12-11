@@ -32,7 +32,12 @@
           :tabs="tabs"
         >
           <template #logs>
-            <log-viewer :entries="entries"></log-viewer>
+            <log-viewer
+              :entries="entries"
+              :sessions="sessions"
+              :current-session="currentSession"
+              v-model:selected-session="selectedSession"
+            ></log-viewer>
           </template>
 
           <!-- Future tabs would go here -->
@@ -59,7 +64,7 @@
   </div>
 
   <script>
-    const { createApp, ref, computed, onMounted, onUnmounted } = Vue;
+    const { createApp, ref, computed, onMounted, onUnmounted, watch } = Vue;
 
     // ===== Vue App =====
     const app = createApp({
@@ -70,6 +75,9 @@
         const lastHeartbeat = ref(null);
         const reconnectAttempts = ref(0);
         const currentTab = ref('logs');
+        const sessions = ref([]);
+        const currentSession = ref(null);
+        const selectedSession = ref(null);
 
         // === SSE Connection ===
         let eventSource = null;
@@ -105,13 +113,31 @@
           }
         });
 
+        async function fetchSessions() {
+          try {
+            const res = await fetch('/api/sessions');
+            const data = await res.json();
+            sessions.value = data.sessions;
+            currentSession.value = data.current_session;
+            if (!selectedSession.value && data.current_session) {
+              selectedSession.value = data.current_session;
+            } else if (!selectedSession.value && data.sessions.length > 0) {
+              selectedSession.value = data.sessions[0].session_id;
+            }
+          } catch (err) {
+            console.error('Failed to fetch sessions:', err);
+          }
+        }
+
         function connect() {
           // Clean up existing connection
           if (eventSource) {
             eventSource.close();
           }
 
-          eventSource = new EventSource('/events');
+          const sessionParam = selectedSession.value ? `?session=${selectedSession.value}` : '';
+          const url = `/events${sessionParam}`;
+          eventSource = new EventSource(url);
 
           eventSource.onopen = () => {
             console.log('SSE connected');
@@ -199,8 +225,23 @@
           isConnected.value = false;
         }
 
+        // === Watch selectedSession ===
+        watch(selectedSession, (newSession, oldSession) => {
+          if (newSession && newSession !== oldSession) {
+            // Close existing connection
+            if (eventSource) {
+              eventSource.close();
+              eventSource = null;
+            }
+            // Clear entries and reconnect
+            entries.value = [];
+            connect();
+          }
+        });
+
         // === Lifecycle ===
         onMounted(() => {
+          fetchSessions();
           connect();
         });
 
@@ -217,6 +258,10 @@
           currentTab,
           tabs,
           formatHeartbeat,
+          sessions,
+          currentSession,
+          selectedSession,
+          fetchSessions,
         };
       },
     });
@@ -279,12 +324,41 @@
       },
     });
 
+    // ===== SessionSelector Component =====
+    app.component('session-selector', {
+      props: ['sessions', 'currentSession', 'modelValue'],
+      emits: ['update:modelValue'],
+      template: `
+        <div class="session-selector">
+          <label>Session:</label>
+          <select
+            :value="modelValue"
+            @change="$emit('update:modelValue', $event.target.value)"
+            class="session-select"
+          >
+            <option v-for="s in sessions" :key="s.session_id" :value="s.session_id">
+              {{ s.session_id.slice(0, 8) }}{{ s.session_id === currentSession ? ' (current)' : '' }}
+              - {{ s.entry_count }} entries
+            </option>
+          </select>
+        </div>
+      `
+    });
+
     // ===== FilterBar Component =====
     app.component('filter-bar', {
       props: {
         sessions: {
           type: Array,
           default: () => [],
+        },
+        currentSession: {
+          type: String,
+          default: null,
+        },
+        selectedSession: {
+          type: String,
+          default: null,
         },
         modelValue: {
           type: Object,
@@ -295,29 +369,22 @@
           }),
         },
       },
-      emits: ['update:modelValue'],
+      emits: ['update:modelValue', 'update:selectedSession'],
       template: `
         <div class="filter-bar">
+          <session-selector
+            :sessions="sessions"
+            :current-session="currentSession"
+            :model-value="selectedSession"
+            @update:model-value="$emit('update:selectedSession', $event)"
+          />
+
           <input
             type="text"
             placeholder="Search logs..."
             :value="modelValue.search"
             @input="onSearchInput"
           />
-
-          <select
-            :value="modelValue.sessionId || ''"
-            @change="onSessionChange"
-          >
-            <option value="">All Sessions</option>
-            <option
-              v-for="session in sessions"
-              :key="session"
-              :value="session"
-            >
-              {{ truncateSession(session) }}
-            </option>
-          </select>
 
           <select
             multiple
@@ -358,8 +425,7 @@
         hasFilters() {
           return (
             this.modelValue.search ||
-            this.modelValue.eventTypes.length > 0 ||
-            this.modelValue.sessionId
+            this.modelValue.eventTypes.length > 0
           );
         },
       },
@@ -377,9 +443,6 @@
             this.emit({ search: e.target.value });
           }, 300);
         },
-        onSessionChange(e) {
-          this.emit({ sessionId: e.target.value || null });
-        },
         onEventTypesChange(e) {
           const selected = Array.from(e.target.selectedOptions).map(o => o.value);
           this.emit({ eventTypes: selected });
@@ -388,12 +451,7 @@
           this.emit({
             search: '',
             eventTypes: [],
-            sessionId: null,
           });
-        },
-        truncateSession(id) {
-          if (id.length <= 16) return id;
-          return id.substring(0, 8) + '...' + id.substring(id.length - 4);
         },
       },
       beforeUnmount() {
@@ -489,12 +547,28 @@
           type: Array,
           default: () => [],
         },
+        sessions: {
+          type: Array,
+          default: () => [],
+        },
+        currentSession: {
+          type: String,
+          default: null,
+        },
+        selectedSession: {
+          type: String,
+          default: null,
+        },
       },
+      emits: ['update:selectedSession'],
       template: `
         <div class="log-viewer">
           <filter-bar
             v-model="filters"
-            :sessions="uniqueSessions"
+            :sessions="sessions"
+            :current-session="currentSession"
+            :selected-session="selectedSession"
+            @update:selected-session="$emit('update:selectedSession', $event)"
           ></filter-bar>
 
           <div class="log-viewer-controls">
