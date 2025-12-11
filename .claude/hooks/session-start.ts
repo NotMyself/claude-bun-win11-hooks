@@ -106,9 +106,10 @@ async function configurePlaywrightScreenshots(cwd: string): Promise<void> {
     await mkdir(screenshotsDir, { recursive: true });
 
     // Configure Playwright MCP via Docker CLI
+    // Uses 'docker mcp config write' with JSON to set outputDir
+    const configJson = JSON.stringify({ playwright: { outputDir: dockerPath } });
     const proc = spawn([
-      "docker", "mcp", "config", "set",
-      "playwright", "outputDir", dockerPath
+      "docker", "mcp", "config", "write", configJson
     ], {
       stdout: "ignore",
       stderr: "ignore",
