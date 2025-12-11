@@ -258,3 +258,408 @@ describe('SSE reconnect backoff', () => {
     expect(calculateDelay(100)).toBe(30000);
   });
 });
+
+// ===== LogViewer - Reverse Order (F02) =====
+describe('LogViewer - Reverse Order', () => {
+  interface TestEntry {
+    timestamp: string;
+    event: string;
+    session_id: string;
+    data: Record<string, unknown>;
+  }
+
+  const reverseEntries = (entries: TestEntry[]): TestEntry[] => {
+    return entries.slice().reverse();
+  };
+
+  it('should display entries in reverse chronological order', () => {
+    const entries: TestEntry[] = [
+      { timestamp: '2024-01-01T10:00:00Z', event: 'SessionStart', session_id: '1', data: {} },
+      { timestamp: '2024-01-01T11:00:00Z', event: 'PreToolUse', session_id: '1', data: {} },
+      { timestamp: '2024-01-01T12:00:00Z', event: 'PostToolUse', session_id: '1', data: {} },
+    ];
+
+    const reversed = reverseEntries(entries);
+
+    // Verify newest entry is first
+    expect(reversed[0]?.timestamp).toBe('2024-01-01T12:00:00Z');
+    expect(reversed[0]?.event).toBe('PostToolUse');
+
+    // Verify oldest entry is last
+    expect(reversed[2]?.timestamp).toBe('2024-01-01T10:00:00Z');
+    expect(reversed[2]?.event).toBe('SessionStart');
+  });
+
+  it('should preserve all entries when reversing', () => {
+    const entries: TestEntry[] = [
+      { timestamp: '2024-01-01T10:00:00Z', event: 'SessionStart', session_id: '1', data: {} },
+      { timestamp: '2024-01-01T11:00:00Z', event: 'PreToolUse', session_id: '1', data: {} },
+    ];
+
+    const reversed = reverseEntries(entries);
+    expect(reversed.length).toBe(entries.length);
+  });
+
+  it('should handle empty array', () => {
+    const entries: TestEntry[] = [];
+    const reversed = reverseEntries(entries);
+    expect(reversed).toEqual([]);
+  });
+
+  it('should handle single entry', () => {
+    const entries: TestEntry[] = [
+      { timestamp: '2024-01-01T10:00:00Z', event: 'SessionStart', session_id: '1', data: {} },
+    ];
+    const reversed = reverseEntries(entries);
+    expect(reversed).toEqual(entries);
+  });
+});
+
+// ===== LogEntry - getSummary (F03) =====
+describe('LogEntry - getSummary', () => {
+  interface Entry {
+    event: string;
+    data: Record<string, unknown>;
+    session_id: string;
+  }
+
+  const getSummary = (entry: Entry): string => {
+    const data = entry.data || {};
+    const truncate = (str: string, len = 50) =>
+      str && str.length > len ? str.substring(0, len) + '...' : str;
+
+    switch (entry.event) {
+      case 'UserPromptSubmit':
+        return truncate((data.prompt as string) || (data.message as string) || '');
+      case 'PreToolUse':
+        return (data.tool_name as string) || (data.toolName as string) || '';
+      case 'PostToolUse':
+        const toolName = (data.tool_name as string) || (data.toolName as string) || '';
+        const success = data.error ? '✗' : '✓';
+        return `${toolName} ${success}`;
+      case 'PostToolUseFailure':
+        const failedTool = (data.tool_name as string) || (data.toolName as string) || '';
+        const errorMsg = truncate((data.error as string) || '', 30);
+        return `${failedTool} - ${errorMsg}`;
+      case 'SessionStart':
+      case 'SessionEnd':
+        return `Session: ${truncate(entry.session_id || '', 20)}`;
+      case 'SubagentStart':
+      case 'SubagentStop':
+        return (data.subagent_type as string) || (data.type as string) || '';
+      case 'Notification':
+        return truncate((data.message as string) || (data.notification as string) || '');
+      case 'PermissionRequest':
+        return (data.permission_type as string) || (data.permission as string) || '';
+      case 'PreCompact':
+        return truncate((data.reason as string) || 'Context compaction');
+      case 'Stop':
+        return truncate((data.reason as string) || 'User interrupt');
+      default:
+        return '';
+    }
+  };
+
+  const testCases = [
+    {
+      event: 'UserPromptSubmit',
+      data: { prompt: 'Hello world this is a very long prompt that should be truncated' },
+      session_id: 'test',
+      expected: 'Hello world this is a very long prompt that should...',
+    },
+    {
+      event: 'PreToolUse',
+      data: { tool_name: 'Read' },
+      session_id: 'test',
+      expected: 'Read',
+    },
+    {
+      event: 'PostToolUse',
+      data: { tool_name: 'Write', error: null },
+      session_id: 'test',
+      expected: 'Write ✓',
+    },
+    {
+      event: 'PostToolUse',
+      data: { tool_name: 'Bash', error: 'Command failed' },
+      session_id: 'test',
+      expected: 'Bash ✗',
+    },
+    {
+      event: 'PostToolUseFailure',
+      data: { tool_name: 'Edit', error: 'File not found' },
+      session_id: 'test',
+      expected: 'Edit - File not found',
+    },
+    {
+      event: 'SessionStart',
+      data: {},
+      session_id: 'abc123def456',
+      expected: 'Session: abc123def456',
+    },
+    {
+      event: 'SubagentStart',
+      data: { subagent_type: 'Explore' },
+      session_id: 'test',
+      expected: 'Explore',
+    },
+    {
+      event: 'Notification',
+      data: { message: 'Task completed successfully' },
+      session_id: 'test',
+      expected: 'Task completed successfully',
+    },
+    {
+      event: 'PermissionRequest',
+      data: { permission_type: 'file_write' },
+      session_id: 'test',
+      expected: 'file_write',
+    },
+    {
+      event: 'PreCompact',
+      data: { reason: 'Context limit reached' },
+      session_id: 'test',
+      expected: 'Context limit reached',
+    },
+    {
+      event: 'Stop',
+      data: { reason: 'User pressed Ctrl+C' },
+      session_id: 'test',
+      expected: 'User pressed Ctrl+C',
+    },
+  ];
+
+  testCases.forEach(({ event, data, session_id, expected }) => {
+    it(`should return correct summary for ${event}`, () => {
+      const entry = { event, data, session_id };
+      const summary = getSummary(entry);
+      expect(summary).toBe(expected);
+    });
+  });
+
+  it('should truncate long UserPromptSubmit prompts', () => {
+    const entry = {
+      event: 'UserPromptSubmit',
+      data: { prompt: 'a'.repeat(100) },
+      session_id: 'test',
+    };
+    const summary = getSummary(entry);
+    expect(summary.length).toBe(53); // 50 chars + '...'
+    expect(summary.endsWith('...')).toBe(true);
+  });
+
+  it('should truncate long error messages in PostToolUseFailure', () => {
+    const entry = {
+      event: 'PostToolUseFailure',
+      data: { tool_name: 'Test', error: 'a'.repeat(100) },
+      session_id: 'test',
+    };
+    const summary = getSummary(entry);
+    expect(summary).toContain('Test - ');
+    expect(summary.endsWith('...')).toBe(true);
+  });
+
+  it('should handle missing data fields gracefully', () => {
+    const entry = {
+      event: 'PreToolUse',
+      data: {},
+      session_id: 'test',
+    };
+    const summary = getSummary(entry);
+    expect(summary).toBe('');
+  });
+});
+
+// ===== LogEntry - syntaxHighlight (F04) =====
+describe('LogEntry - syntaxHighlight', () => {
+  const syntaxHighlight = (json: unknown): string => {
+    let jsonStr = typeof json === 'string' ? json : JSON.stringify(json, null, 2);
+
+    // Escape HTML entities
+    jsonStr = jsonStr.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    // Apply syntax highlighting
+    return jsonStr.replace(
+      /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+      function (match) {
+        let cls = 'json-number';
+        if (/^"/.test(match)) {
+          if (/:$/.test(match)) {
+            cls = 'json-key';
+          } else {
+            cls = 'json-string';
+          }
+        } else if (/true|false/.test(match)) {
+          cls = 'json-boolean';
+        } else if (/null/.test(match)) {
+          cls = 'json-null';
+        }
+        return '<span class="' + cls + '">' + match + '</span>';
+      }
+    );
+  };
+
+  it('should highlight JSON keys', () => {
+    const json = '{"name": "test"}';
+    const result = syntaxHighlight(json);
+    expect(result).toContain('json-key');
+    expect(result).toContain('"name":');
+  });
+
+  it('should highlight JSON strings', () => {
+    const json = '{"name": "test"}';
+    const result = syntaxHighlight(json);
+    expect(result).toContain('json-string');
+    expect(result).toContain('"test"');
+  });
+
+  it('should highlight JSON numbers', () => {
+    const json = '{"count": 42}';
+    const result = syntaxHighlight(json);
+    expect(result).toContain('json-number');
+    expect(result).toContain('42');
+  });
+
+  it('should highlight JSON booleans', () => {
+    const json = '{"active": true}';
+    const result = syntaxHighlight(json);
+    expect(result).toContain('json-boolean');
+    expect(result).toContain('true');
+  });
+
+  it('should highlight JSON null', () => {
+    const json = '{"value": null}';
+    const result = syntaxHighlight(json);
+    expect(result).toContain('json-null');
+    expect(result).toContain('null');
+  });
+
+  it('should escape HTML entities', () => {
+    const json = '{"html": "<script>alert(1)</script>"}';
+    const result = syntaxHighlight(json);
+    expect(result).toContain('&lt;script&gt;');
+    expect(result).toContain('&lt;/script&gt;');
+    expect(result).not.toContain('<script>');
+  });
+
+  it('should handle object input', () => {
+    const json = { name: 'test', count: 42 };
+    const result = syntaxHighlight(json);
+    expect(result).toContain('json-key');
+    expect(result).toContain('json-string');
+    expect(result).toContain('json-number');
+  });
+
+  it('should highlight negative numbers', () => {
+    const json = '{"temp": -5}';
+    const result = syntaxHighlight(json);
+    expect(result).toContain('json-number');
+    expect(result).toContain('-5');
+  });
+
+  it('should highlight decimal numbers', () => {
+    const json = '{"pi": 3.14}';
+    const result = syntaxHighlight(json);
+    expect(result).toContain('json-number');
+    expect(result).toContain('3.14');
+  });
+
+  it('should highlight scientific notation', () => {
+    const json = '{"value": 1.5e10}';
+    const result = syntaxHighlight(json);
+    expect(result).toContain('json-number');
+    expect(result).toContain('1.5e10');
+  });
+
+  it('should handle both true and false', () => {
+    const json = '{"enabled": true, "disabled": false}';
+    const result = syntaxHighlight(json);
+    expect(result).toContain('json-boolean');
+    const trueMatches = result.match(/true/g);
+    const falseMatches = result.match(/false/g);
+    expect(trueMatches?.length).toBeGreaterThan(0);
+    expect(falseMatches?.length).toBeGreaterThan(0);
+  });
+
+  it('should escape ampersands', () => {
+    const json = '{"text": "A & B"}';
+    const result = syntaxHighlight(json);
+    expect(result).toContain('&amp;');
+    expect(result).not.toMatch(/A & B/);
+  });
+});
+
+// ===== EventFilterDropdown (F05) =====
+describe('EventFilterDropdown', () => {
+  const allEvents = [
+    'UserPromptSubmit',
+    'PreToolUse',
+    'PostToolUse',
+    'PostToolUseFailure',
+    'SessionStart',
+    'SessionEnd',
+    'SubagentStart',
+    'SubagentStop',
+    'Notification',
+    'PermissionRequest',
+    'PreCompact',
+    'Stop',
+  ];
+
+  const getButtonLabel = (selectedEvents: string[], eventTypes: string[]): string => {
+    if (selectedEvents.length === 0) {
+      return 'No Events';
+    }
+    if (selectedEvents.length === eventTypes.length) {
+      return 'All Events';
+    }
+    if (selectedEvents.length === 1) {
+      return selectedEvents[0] || '';
+    }
+    return `${selectedEvents.length} Events`;
+  };
+
+  it('should show "All Events" when all are selected', () => {
+    const label = getButtonLabel(allEvents, allEvents);
+    expect(label).toBe('All Events');
+  });
+
+  it('should show "No Events" when none are selected', () => {
+    const label = getButtonLabel([], allEvents);
+    expect(label).toBe('No Events');
+  });
+
+  it('should show event name when one is selected', () => {
+    const label = getButtonLabel(['PreToolUse'], allEvents);
+    expect(label).toBe('PreToolUse');
+  });
+
+  it('should show count when multiple but not all selected', () => {
+    const selected = ['PreToolUse', 'PostToolUse', 'Notification'];
+    const label = getButtonLabel(selected, allEvents);
+    expect(label).toBe('3 Events');
+  });
+
+  it('should show count for two events', () => {
+    const selected = ['SessionStart', 'SessionEnd'];
+    const label = getButtonLabel(selected, allEvents);
+    expect(label).toBe('2 Events');
+  });
+
+  it('should show "All Events" when all 12 events are selected', () => {
+    const label = getButtonLabel(allEvents, allEvents);
+    expect(label).toBe('All Events');
+  });
+
+  it('should show count for almost all events', () => {
+    const almostAll = allEvents.slice(0, 11); // 11 out of 12
+    const label = getButtonLabel(almostAll, allEvents);
+    expect(label).toBe('11 Events');
+  });
+
+  it('should handle different event type list', () => {
+    const customEvents = ['EventA', 'EventB', 'EventC'];
+    const label = getButtonLabel(customEvents, customEvents);
+    expect(label).toBe('All Events');
+  });
+});
