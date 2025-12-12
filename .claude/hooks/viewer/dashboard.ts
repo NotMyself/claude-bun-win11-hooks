@@ -101,7 +101,8 @@ export class DashboardService {
         .split("\n")
         .filter(Boolean)
         .map((line) => JSON.parse(line) as LogEntry);
-    } catch {
+    } catch (err) {
+      console.debug('[DashboardService] Failed to read session entries:', err);
       return [];
     }
   }
@@ -196,7 +197,8 @@ export class DashboardService {
         totalMessages: data.totalMessages || 0,
         modelUsage: data.modelUsage || {},
       };
-    } catch {
+    } catch (err) {
+      console.debug('[DashboardService] Failed to parse global stats:', err);
       return null;
     }
   }
@@ -222,7 +224,8 @@ export class DashboardService {
           filePath,
         };
       });
-    } catch {
+    } catch (err) {
+      console.debug('[DashboardService] Failed to read commands:', err);
       return [];
     }
   }
@@ -247,7 +250,8 @@ export class DashboardService {
           filePath,
         };
       });
-    } catch {
+    } catch (err) {
+      console.debug('[DashboardService] Failed to read skills:', err);
       return [];
     }
   }
@@ -279,7 +283,8 @@ export class DashboardService {
       }
 
       return hooks;
-    } catch {
+    } catch (err) {
+      console.debug('[DashboardService] Failed to parse hooks config:', err);
       return [];
     }
   }
@@ -295,7 +300,8 @@ export class DashboardService {
       const content = readFileSync(settingsPath, "utf-8");
       const settings = JSON.parse(content);
       return settings.enabledMcpjsonServers || [];
-    } catch {
+    } catch (err) {
+      console.debug('[DashboardService] Failed to parse MCP servers config:', err);
       return [];
     }
   }
