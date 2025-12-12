@@ -79,16 +79,16 @@ export class LogFileWatcher {
   /**
    * List all available session log files
    */
-  static listSessions(): SessionInfo[] {
+  static async listSessions(): Promise<SessionInfo[]> {
     const dir = PATHS.LOGS_DIR;
     if (!existsSync(dir)) return [];
 
     const files = readdirSync(dir).filter(f => f.endsWith('.txt') && f !== '.gitkeep');
-    return files.map(filename => {
+    const sessions = await Promise.all(files.map(async filename => {
       const session_id = filename.replace('.txt', '');
       const file_path = join(dir, filename);
       const stats = statSync(file_path);
-      const content = readFileSync(file_path, 'utf-8');
+      const content = await Bun.file(file_path).text();
       const lines = content.trim().split('\n').filter(Boolean);
 
       let first_entry = '', last_entry = '';
@@ -113,7 +113,8 @@ export class LogFileWatcher {
         entry_count: lines.length,
         size_bytes: stats.size,
       };
-    }).sort((a, b) => b.last_entry.localeCompare(a.last_entry));
+    }));
+    return sessions.sort((a, b) => b.last_entry.localeCompare(a.last_entry));
   }
 
   /**

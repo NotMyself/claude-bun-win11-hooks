@@ -65,8 +65,8 @@ function formatSSE(event: string, data: unknown): string {
 /**
  * Handle sessions list request
  */
-function handleSessionsList(): Response {
-  const sessions = LogFileWatcher.listSessions();
+async function handleSessionsList(): Promise<Response> {
+  const sessions = await LogFileWatcher.listSessions();
   const response: SessionListResponse = {
     sessions,
     current_session: currentSessionId,
@@ -162,7 +162,7 @@ async function handleRequest(request: Request): Promise<Response> {
 
   // Route: GET /api/sessions -> JSON list of sessions
   if (path === "/api/sessions" && request.method === "GET") {
-    return handleSessionsList();
+    return await handleSessionsList();
   }
 
   // Route: GET /api/entries -> JSON array of all entries

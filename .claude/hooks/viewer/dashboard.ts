@@ -65,8 +65,8 @@ export class DashboardService {
   /**
    * Get sessions with computed activity status.
    */
-  private getSessions(): DashboardSession[] {
-    const sessionInfos = LogFileWatcher.listSessions();
+  private async getSessions(): Promise<DashboardSession[]> {
+    const sessionInfos = await LogFileWatcher.listSessions();
     const now = Date.now();
 
     return sessionInfos.map((info) => {
