@@ -216,3 +216,66 @@ export async function readInput<T>(): Promise<T> {
 export function writeOutput(output: unknown): void {
   console.log(JSON.stringify(output));
 }
+
+/**
+ * Heartbeat state tracking
+ */
+let lastHeartbeatTime = 0;
+let sessionToolCount = 0;
+let sessionMessageCount = 0;
+
+/** Minimum interval between heartbeats in milliseconds */
+const HEARTBEAT_INTERVAL_MS = 30_000; // 30 seconds
+
+/**
+ * Conditionally writes a heartbeat entry if enough time has passed.
+ *
+ * Heartbeats are used by the dashboard to detect active sessions.
+ * They are throttled to avoid excessive log writes.
+ *
+ * @param session_id - Session identifier
+ * @param incrementTool - Whether to increment the tool counter
+ * @param incrementMessage - Whether to increment the message counter
+ *
+ * @example Called from pre-tool-use handler
+ * ```typescript
+ * await maybeWriteHeartbeat(input.session_id, true, false);
+ * ```
+ *
+ * @example Called from user-prompt-submit handler
+ * ```typescript
+ * await maybeWriteHeartbeat(input.session_id, false, true);
+ * ```
+ */
+export async function maybeWriteHeartbeat(
+  session_id: string,
+  incrementTool: boolean = false,
+  incrementMessage: boolean = false
+): Promise<void> {
+  // Update counters
+  if (incrementTool) sessionToolCount++;
+  if (incrementMessage) sessionMessageCount++;
+
+  // Check if enough time has passed
+  const now = Date.now();
+  if (now - lastHeartbeatTime < HEARTBEAT_INTERVAL_MS) {
+    return; // Too soon for another heartbeat
+  }
+
+  // Update timestamp and write heartbeat
+  lastHeartbeatTime = now;
+
+  await log("Heartbeat", session_id, {
+    tool_count: sessionToolCount,
+    message_count: sessionMessageCount,
+  });
+}
+
+/**
+ * Resets heartbeat state. Useful for testing.
+ */
+export function resetHeartbeatState(): void {
+  lastHeartbeatTime = 0;
+  sessionToolCount = 0;
+  sessionMessageCount = 0;
+}
