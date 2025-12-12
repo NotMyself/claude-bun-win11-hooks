@@ -72,6 +72,20 @@ After all implementation features complete:
 - Take screenshots to document the final state
 - Generate a summary report
 
+### 6. Relocate Completed Plan
+
+After all features are complete and validated:
+
+1. **Extract plan name**: Get the plan directory name (e.g., `ui-updates` from `dev/active/ui-updates`)
+2. **Move to complete**: Relocate the entire plan directory from `dev/active/<plan-name>` to `dev/complete/<plan-name>`
+3. **Commit relocation**: Create a git commit documenting the plan completion:
+   ```
+   chore: relocate <plan-name> plan to dev/complete
+
+   All features implemented and validated.
+   ```
+4. **Confirm success**: Verify the plan exists in `dev/complete/` and is removed from `dev/active/`
+
 ## Output
 
 After execution completes, provide:
@@ -80,6 +94,7 @@ After execution completes, provide:
 2. Any failures encountered
 3. Links to commits made
 4. Screenshots from E2E validation (if applicable)
+5. Confirmation that plan was relocated to `dev/complete/`
 
 ## Example Usage
 
@@ -94,6 +109,7 @@ This will:
 3. Execute each pending feature prompt via sub-agents
 4. Track progress in `features.json`
 5. Run final E2E validation
+6. Move `dev/active/ui-updates` to `dev/complete/ui-updates` and commit
 
 ## Error Handling
 
@@ -124,5 +140,6 @@ User can check progress anytime by reading `features.json`.
 5. Spawn a sub-agent with the Task tool to implement that feature
 6. After completion, update features.json and proceed to next feature
 7. Continue until all features are complete or a failure occurs
+8. When all features are complete and validated, relocate the plan directory to `dev/complete/` and commit
 
 Begin orchestration now.
