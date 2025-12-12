@@ -300,8 +300,14 @@
         </button>
       `,
       data() {
+        let savedTheme = 'system';
+        try {
+          savedTheme = localStorage.getItem('theme') || 'system';
+        } catch {
+          // Storage blocked by browser privacy settings
+        }
         return {
-          current: localStorage.getItem('theme') || 'system',
+          current: savedTheme,
         };
       },
       computed: {
@@ -318,7 +324,11 @@
           this.apply();
         },
         apply() {
-          localStorage.setItem('theme', this.current);
+          try {
+            localStorage.setItem('theme', this.current);
+          } catch {
+            // Storage blocked by browser privacy settings
+          }
           document.documentElement.setAttribute('data-theme', this.current);
         },
       },
@@ -840,10 +850,12 @@
           return `${entry.timestamp}-${entry.event}-${entry.session_id}`;
         },
         scrollToTop() {
-          if (!this.autoScroll || !this.$refs.logList) return;
+          if (!this.autoScroll) return;
           this.$nextTick(() => {
             const list = this.$refs.logList;
-            list.scrollTop = 0;
+            if (list) {
+              list.scrollTop = 0;
+            }
           });
         },
       },

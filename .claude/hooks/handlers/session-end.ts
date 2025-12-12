@@ -92,8 +92,12 @@ await log("SessionEnd", input.session_id, {
   ended_at: new Date().toISOString(),
 });
 
-// Shut down the viewer server
-await shutdownViewer();
+// Only shut down viewer on actual exit, not clear/compact
+// Clear and compact trigger SessionEnd then SessionStart - viewer should persist
+const shouldShutdown = input.reason !== "clear" && input.reason !== "compact";
+if (shouldShutdown) {
+  await shutdownViewer();
+}
 
 // Build the output response
 // SessionEnd doesn't support hookSpecificOutput, just continue

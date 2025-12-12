@@ -202,6 +202,7 @@ const server = Bun.serve({
   port: SERVER_CONFIG.PORT,
   hostname: SERVER_CONFIG.HOST,
   fetch: handleRequest,
+  idleTimeout: 0, // Disable timeout for SSE connections
 });
 
 console.log(`🔍 Hook Viewer running at ${SERVER_CONFIG.URL}`);
