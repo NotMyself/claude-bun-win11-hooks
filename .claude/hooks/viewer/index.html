@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Claude Code Hook Viewer</title>
+  <title>Claude Dashboard</title>
 
   <!-- Google Fonts: Poppins -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -21,7 +21,10 @@
     <div class="app-container">
       <!-- Header -->
       <header class="header">
-        <h1>Hook Viewer</h1>
+        <div class="header-brand">
+          <img src="/logo.svg" alt="Logo" class="header-logo" />
+          <h1>Claude Dashboard</h1>
+        </div>
         <theme-toggle></theme-toggle>
       </header>
 
@@ -84,7 +87,7 @@
         let reconnectTimeout = null;
 
         const tabs = [
-          { id: 'logs', label: 'Event Log' },
+          { id: 'logs', label: 'Hook Log' },
           // Future: { id: 'analytics', label: 'Analytics' },
         ];
 
