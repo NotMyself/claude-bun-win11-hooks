@@ -85,3 +85,81 @@ export interface SessionListResponse {
   sessions: SessionInfo[];
   current_session: string | null;
 }
+
+/**
+ * Session activity status for dashboard
+ */
+export type SessionStatus = "active" | "inactive" | "ended";
+
+/**
+ * Extended session info with dashboard-specific fields
+ */
+export interface DashboardSession extends SessionInfo {
+  status: SessionStatus;
+  last_heartbeat: string | null;
+  tool_call_count: number;
+  message_count: number;
+  compaction_count: number;
+  started_at: string | null;
+}
+
+/**
+ * Token usage statistics per model
+ */
+export interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadInputTokens: number;
+  cacheCreationInputTokens: number;
+}
+
+/**
+ * Global statistics from stats-cache.json
+ */
+export interface GlobalStats {
+  totalSessions: number;
+  totalMessages: number;
+  modelUsage: Record<string, TokenUsage>;
+}
+
+/**
+ * Command definition from .claude/commands/*.md
+ */
+export interface CommandInfo {
+  name: string;
+  description: string;
+  argumentHint?: string;
+  filePath: string;
+}
+
+/**
+ * Skill definition from .claude/skills/*.md
+ */
+export interface SkillInfo {
+  name: string;
+  description: string;
+  filePath: string;
+}
+
+/**
+ * Hook configuration from settings.json
+ */
+export interface HookConfig {
+  eventName: string;
+  matcher: string;
+  command: string;
+}
+
+/**
+ * Complete dashboard data returned by API
+ */
+export interface DashboardData {
+  sessions: DashboardSession[];
+  currentSession: string | null;
+  globalStats: GlobalStats | null;
+  commands: CommandInfo[];
+  hooks: HookConfig[];
+  skills: SkillInfo[];
+  mcpServers: string[];
+  lastUpdated: string;
+}
