@@ -1,4 +1,4 @@
-import { SERVER_CONFIG, PATHS, SSE_CONFIG, CURRENT_SESSION_ENV } from "./config";
+import { SERVER_CONFIG, PATHS, SSE_CONFIG, CURRENT_SESSION_ENV, TIMING } from "./config";
 import { LogFileWatcher } from "./watcher";
 import type { LogEntry, SSEMessage, SessionListResponse } from "./types";
 import { DashboardService } from "./dashboard";
@@ -202,7 +202,7 @@ async function handleRequest(request: Request): Promise<Response> {
       watcher.stop();
       server.stop();
       process.exit(0);
-    }, 100);
+    }, TIMING.SHUTDOWN_DELAY_MS);
     return new Response(JSON.stringify({ status: "shutting_down" }), {
       headers: {
         "Content-Type": "application/json",

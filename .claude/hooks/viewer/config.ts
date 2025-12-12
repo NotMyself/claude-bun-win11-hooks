@@ -97,3 +97,20 @@ export const DASHBOARD_CONFIG = {
   /** Dashboard data refresh interval for UI polling */
   REFRESH_INTERVAL_MS: 5_000, // 5 seconds
 } as const;
+
+/**
+ * Timing constants
+ */
+export const TIMING = {
+  /** Delay before shutdown to allow response to complete */
+  SHUTDOWN_DELAY_MS: 100,
+
+  /** Dashboard polling interval in milliseconds */
+  DASHBOARD_POLL_INTERVAL_MS: 5_000,
+
+  /** File watch polling interval in milliseconds */
+  FILE_WATCH_INTERVAL_MS: 500,
+
+  /** SSE heartbeat interval in milliseconds */
+  SSE_HEARTBEAT_INTERVAL_MS: 30_000,
+} as const;
