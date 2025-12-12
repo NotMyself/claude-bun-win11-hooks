@@ -1,12 +1,12 @@
 # Claude Code Hooks with Bun
 
-A complete implementation of all 12 Claude Code hooks using [Bun](https://bun.sh/) as the JavaScript runtime, featuring structured JSONL logging and a realtime web-based log viewer.
+A complete implementation of all 12 Claude Code hooks using [Bun](https://bun.sh/) as the JavaScript runtime, featuring structured JSONL logging and the Claude Dashboard - a realtime web-based log viewer.
 
 ## Features
 
 - All 12 Claude Code hooks implemented with full TypeScript type safety
 - Structured JSONL logging for all hook events
-- Realtime log viewer web UI with SSE streaming
+- Claude Dashboard web UI with SSE streaming for realtime log viewing
 - Dark/light theme support
 - Event filtering and categorization
 - Comprehensive test coverage
@@ -31,13 +31,13 @@ cd .claude/hooks && bun install
 
 ### 2. Start Using
 
-The hooks are automatically active when you run Claude Code in this directory. On session startup, the realtime log viewer will automatically launch at http://localhost:3456.
+The hooks are automatically active when you run Claude Code in this directory. On session startup, the Claude Dashboard will automatically launch at http://localhost:3456.
 
-## Realtime Log Viewer
+## Claude Dashboard (Log Viewer)
 
-The log viewer provides a web-based dashboard to monitor hook activity in realtime:
+The Claude Dashboard provides a web-based interface to monitor hook activity in realtime:
 
-- **Auto-start**: Launches automatically when Claude Code starts a new session
+- **Auto-start**: Launches automatically when a Claude Code session starts
 - **Live Updates**: Uses Server-Sent Events (SSE) for instant log streaming
 - **Filtering**: Filter logs by event type (PreToolUse, PostToolUse, etc.)
 - **Themes**: Toggle between dark and light themes
@@ -48,7 +48,7 @@ The log viewer provides a web-based dashboard to monitor hook activity in realti
 ```bash
 cd .claude/hooks
 
-# Start the viewer
+# Start the dashboard
 bun run viewer
 
 # Or with hot reload for development
@@ -64,7 +64,7 @@ bun run viewer:dev
 | **PostToolUse** | Runs after a tool completes. Can inject context or modify MCP output. |
 | **PostToolUseFailure** | Triggered when a tool fails. Can provide recovery context. |
 | **Notification** | Handles system notifications from Claude Code. |
-| **SessionStart** | Runs when a session starts. Auto-starts the log viewer. |
+| **SessionStart** | Runs when a session starts. Auto-starts the Claude Dashboard. |
 | **SessionEnd** | Triggered when a session ends. |
 | **Stop** | Handles user interrupts (Ctrl+C, Escape). |
 | **SubagentStart** | Runs when a subagent is spawned. |
@@ -84,29 +84,35 @@ All hooks write to `.claude/hooks/hooks-log.txt` in JSONL format:
 
 ```
 .claude/
-├── settings.local.json    # Hook configuration
+├── settings.json              # Hook configuration
+├── commands/                  # Custom slash commands
+│   ├── optimize-plan.md
+│   └── orchestrate-plan.md
 └── hooks/
-    ├── user-prompt-submit.ts
-    ├── pre-tool-use.ts
-    ├── post-tool-use.ts
-    ├── post-tool-use-failure.ts
-    ├── notification.ts
-    ├── session-start.ts
-    ├── session-end.ts
-    ├── stop.ts
-    ├── subagent-start.ts
-    ├── subagent-stop.ts
-    ├── pre-compact.ts
-    ├── permission-request.ts
-    ├── hooks-log.txt          # Structured log output
+    ├── handlers/              # Hook handler scripts
+    │   ├── user-prompt-submit.ts
+    │   ├── pre-tool-use.ts
+    │   ├── post-tool-use.ts
+    │   ├── post-tool-use-failure.ts
+    │   ├── notification.ts
+    │   ├── session-start.ts
+    │   ├── session-end.ts
+    │   ├── stop.ts
+    │   ├── subagent-start.ts
+    │   ├── subagent-stop.ts
+    │   ├── pre-compact.ts
+    │   └── permission-request.ts
+    ├── logs/                  # Structured log output directory
     ├── utils/
     │   └── logger.ts          # Shared logging utilities
     └── viewer/
         ├── server.ts          # Bun HTTP server
         ├── watcher.ts         # File watcher for logs
         ├── index.html         # Vue.js web UI
+        ├── logo.svg           # Dashboard logo
         ├── config.ts          # Configuration
         ├── types.ts           # TypeScript types
+        ├── vitest.config.ts   # Test configuration
         ├── styles/
         │   └── theme.css      # Theme styles
         └── __tests__/         # Test files
@@ -157,7 +163,7 @@ cat .claude/hooks/hooks-log.txt
 
 ## Configuration
 
-Hook configuration is in `.claude/settings.local.json`. Each hook is configured with:
+Hook configuration is in `.claude/settings.json`. Each hook is configured with:
 
 ```json
 {
@@ -168,7 +174,7 @@ Hook configuration is in `.claude/settings.local.json`. Each hook is configured 
         "hooks": [
           {
             "type": "command",
-            "command": "bun run .claude/hooks/pre-tool-use.ts"
+            "command": "bun run .claude/hooks/handlers/pre-tool-use.ts"
           }
         ]
       }
@@ -181,10 +187,16 @@ The `matcher` field can filter which tools trigger the hook (empty string matche
 
 ## Dependencies
 
+### Runtime
 - `@anthropic-ai/claude-agent-sdk` - Type definitions for hook inputs/outputs
+
+### Development
 - `@types/bun` - Bun runtime types
-- `typescript` - Type checking
+- `typescript` - Type checking (peer dependency)
+
+### Testing
 - `vitest` - Test runner
+- `@vitest/coverage-v8` - Code coverage
 - `happy-dom` - Browser API mocking for tests
 - `@vue/test-utils` - Vue component testing
 
