@@ -290,6 +290,10 @@
 
         onUnmounted(() => {
           disconnect();
+          if (dashboardPollInterval) {
+            clearInterval(dashboardPollInterval);
+            dashboardPollInterval = null;
+          }
         });
 
         // === Return ===
