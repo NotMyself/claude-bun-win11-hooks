@@ -8,21 +8,25 @@ argument-hint: "<spec-file-path> <output-directory>"
 Transform a project specification into an optimized implementation plan designed for Claude Code sub-agents.
 
 ## Input
+
 - **Spec file**: $ARGUMENTS (first argument) - Path to the project specification markdown file
 - **Output dir**: $ARGUMENTS (second argument) - Directory for the optimized plan output
 
 ## Techniques to Apply
 
 ### From Anthropic's Long-Running Agent Blog
+
 Reference: https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents
 
 1. **Feature-List Scaffolding**: Create `features.json` with testable features, each with:
+
    - Unique ID and clear description
    - Concrete acceptance criteria
    - Status tracking: `pending` | `in_progress` | `completed` | `failed`
    - Verification command
 
 2. **One-Feature-Per-Session**: Each prompt tackles exactly ONE feature with explicit constraint:
+
    > "It is unacceptable to implement features beyond the scope of this task."
 
 3. **Git-Based State Management**: Every prompt ends with commit instructions
@@ -30,6 +34,7 @@ Reference: https://www.anthropic.com/engineering/effective-harnesses-for-long-ru
 4. **Testing-First Validation**: Verification commands in each prompt
 
 ### From Progressive Disclosure UX
+
 Reference: https://www.nngroup.com/articles/progressive-disclosure/
 
 1. **Ordered Complexity**: Structure from simple foundation → complex features
@@ -57,42 +62,53 @@ Create this structure in the output directory:
 
 Each prompt file should follow:
 
-```markdown
+````markdown
 # Feature: [ID] - [Title]
 
 ## Context
+
 [What was completed in prior steps]
 
 ## Objective
+
 [Single, clear goal - ONE feature only]
 
 ## Constraints
+
 - Reference: See constraints.md for global rules
 - [Feature-specific constraints]
 
 ## Files to Create/Modify
+
 - [file path] - [purpose]
 
 ## Implementation Details
+
 [Specific code patterns, interfaces to use]
 
 ## Acceptance Criteria
+
 - [ ] [Testable requirement 1]
 - [ ] [Testable requirement 2]
 
 ## Verification
+
 ```bash
 [Command to verify success]
 ```
+````
 
 ## Commit
+
 ```bash
 git add [files]
 git commit -m "feat([scope]): [description]"
 ```
 
 ## Next
+
 Proceed to: [next prompt file]
+
 ```
 
 ## MCP Tools Available
@@ -124,3 +140,4 @@ Include in constraints.md:
 - **Layer 7**: Final validation (E2E with Playwright)
 
 Now read the spec file and create the optimized plan.
+```

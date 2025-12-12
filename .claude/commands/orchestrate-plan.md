@@ -8,6 +8,7 @@ argument-hint: "<plan-directory>"
 Execute an optimized implementation plan by spawning sub-agents for each feature in sequence.
 
 ## Input
+
 - **Plan directory**: $ARGUMENTS - Path to directory containing the optimized plan (e.g., `dev/active/ui-updates`)
 
 ## Execution Flow
@@ -15,6 +16,7 @@ Execute an optimized implementation plan by spawning sub-agents for each feature
 ### 1. Load Plan State
 
 Read `features.json` from the plan directory to understand:
+
 - Total features and their IDs
 - Current status of each feature
 - Dependency layers
@@ -22,6 +24,7 @@ Read `features.json` from the plan directory to understand:
 ### 2. Run Initialization (if needed)
 
 If no features are `completed` yet:
+
 1. Read `init.md` from the plan directory
 2. Execute the initialization steps to verify environment
 3. Confirm all pre-flight checks pass
@@ -35,6 +38,7 @@ For each feature in `features.json` where `status === "pending"`:
 2. **Read Prompt**: Load the corresponding prompt file from `prompts/` directory
 
 3. **Spawn Sub-Agent**: Use the Task tool with `subagent_type: "general-purpose"` to:
+
    - Execute the feature implementation
    - The prompt should include:
      - The full content of the feature prompt file
@@ -42,6 +46,7 @@ For each feature in `features.json` where `status === "pending"`:
      - Instruction to commit when complete
 
 4. **Verify Completion**: After sub-agent completes:
+
    - Check that verification command passes
    - Check that git commit was made
    - Update `features.json` status to `completed`
@@ -54,6 +59,7 @@ For each feature in `features.json` where `status === "pending"`:
 ### 4. Parallelization (Optional)
 
 Features in the same layer with no inter-dependencies can run in parallel:
+
 - Spawn multiple sub-agents simultaneously using parallel Task tool calls
 - Wait for all to complete before moving to next layer
 - Only parallelize if user confirms with `--parallel` flag
@@ -61,6 +67,7 @@ Features in the same layer with no inter-dependencies can run in parallel:
 ### 5. Final Validation
 
 After all implementation features complete:
+
 - Run the E2E validation prompt (typically the last prompt)
 - Take screenshots to document the final state
 - Generate a summary report
@@ -68,6 +75,7 @@ After all implementation features complete:
 ## Output
 
 After execution completes, provide:
+
 1. Summary of features implemented
 2. Any failures encountered
 3. Links to commits made
@@ -80,6 +88,7 @@ After execution completes, provide:
 ```
 
 This will:
+
 1. Read `dev/active/ui-updates/features.json`
 2. Run `init.md` verification
 3. Execute each pending feature prompt via sub-agents
@@ -96,10 +105,11 @@ This will:
 ## Progress Tracking
 
 The orchestrator updates `features.json` in real-time:
+
 ```json
 {
   "id": "F01",
-  "status": "completed"  // Updated from "pending" → "in_progress" → "completed"
+  "status": "completed" // Updated from "pending" → "in_progress" → "completed"
 }
 ```
 
