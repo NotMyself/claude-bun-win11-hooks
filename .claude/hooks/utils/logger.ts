@@ -40,7 +40,6 @@
  * ```
  */
 
-import { existsSync } from "node:fs";
 import { mkdir, appendFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -86,8 +85,13 @@ export function getLogFilePath(session_id: string): string {
  * @returns Promise that resolves when the directory is confirmed to exist
  */
 async function ensureLogsDir(): Promise<void> {
-  if (!existsSync(LOGS_DIR)) {
+  try {
     await mkdir(LOGS_DIR, { recursive: true });
+  } catch (err) {
+    // Ignore EEXIST - directory already exists (race condition or pre-existing)
+    if ((err as NodeJS.ErrnoException).code !== 'EEXIST') {
+      throw err;
+    }
   }
 }
 
