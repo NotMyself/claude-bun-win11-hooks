@@ -16,7 +16,7 @@ cd .claude/hooks && bun install
 cd .claude/hooks && bun run tsc --noEmit
 
 # Run a hook script directly (for testing)
-bun run .claude/hooks/user-prompt-submit.ts
+bun run .claude/hooks/handlers/user-prompt-submit.ts
 
 # View structured logs
 cat .claude/hooks/hooks-log.txt
@@ -43,11 +43,11 @@ The project uses Claude Code's hooks system to execute TypeScript scripts via Bu
 
 ### Configuration
 
-**Hook Configuration**: `.claude/settings.local.json` defines all 12 hooks and their triggers.
+**Hook Configuration**: `.claude/settings.json` defines all 12 hooks and their triggers.
 
-### Hook Scripts
+### Hook Handlers
 
-Located in `.claude/hooks/`. Each hook:
+Located in `.claude/hooks/handlers/`. Each handler:
 - Receives input via stdin as JSON
 - Uses types from `@anthropic-ai/claude-agent-sdk` for type safety
 - Logs to unified `hooks-log.txt` in JSONL format
@@ -99,18 +99,18 @@ Uses Vitest with happy-dom for browser API mocking.
 
 | Hook | File | Capabilities |
 |------|------|--------------|
-| UserPromptSubmit | `user-prompt-submit.ts` | Log prompts, inject `additionalContext` |
-| PreToolUse | `pre-tool-use.ts` | Allow/deny/modify tool inputs |
-| PostToolUse | `post-tool-use.ts` | Log results, inject context, modify MCP output |
-| PostToolUseFailure | `post-tool-use-failure.ts` | Log failures, provide recovery context |
-| Notification | `notification.ts` | Log system notifications |
-| SessionStart | `session-start.ts` | Log session start, inject welcome context, auto-start viewer |
-| SessionEnd | `session-end.ts` | Log session termination |
-| Stop | `stop.ts` | Log user interrupts |
-| SubagentStart | `subagent-start.ts` | Log subagent spawning, inject context |
-| SubagentStop | `subagent-stop.ts` | Log subagent completion |
-| PreCompact | `pre-compact.ts` | Log context compaction events |
-| PermissionRequest | `permission-request.ts` | Auto-approve/deny permissions |
+| UserPromptSubmit | `handlers/user-prompt-submit.ts` | Log prompts, inject `additionalContext` |
+| PreToolUse | `handlers/pre-tool-use.ts` | Allow/deny/modify tool inputs |
+| PostToolUse | `handlers/post-tool-use.ts` | Log results, inject context, modify MCP output |
+| PostToolUseFailure | `handlers/post-tool-use-failure.ts` | Log failures, provide recovery context |
+| Notification | `handlers/notification.ts` | Log system notifications |
+| SessionStart | `handlers/session-start.ts` | Log session start, inject welcome context, auto-start viewer |
+| SessionEnd | `handlers/session-end.ts` | Log session termination |
+| Stop | `handlers/stop.ts` | Log user interrupts |
+| SubagentStart | `handlers/subagent-start.ts` | Log subagent spawning, inject context |
+| SubagentStop | `handlers/subagent-stop.ts` | Log subagent completion |
+| PreCompact | `handlers/pre-compact.ts` | Log context compaction events |
+| PermissionRequest | `handlers/permission-request.ts` | Auto-approve/deny permissions |
 
 ## Hook Output Capabilities
 

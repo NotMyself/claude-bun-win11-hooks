@@ -67,8 +67,8 @@ import {
 } from "@anthropic-ai/claude-agent-sdk";
 import { spawn } from "bun";
 import { join } from "path";
-import { log, readInput, writeOutput } from "./utils/logger.ts";
-import { CURRENT_SESSION_ENV } from "./viewer/config";
+import { log, readInput, writeOutput } from "../utils/logger.ts";
+import { CURRENT_SESSION_ENV } from "../viewer/config";
 
 // Note: Playwright MCP screenshot directory configuration was removed.
 // The Docker MCP Playwright image doesn't support custom output directories
@@ -108,7 +108,7 @@ async function isViewerRunning(): Promise<boolean> {
  * Start the viewer server as a detached background process
  */
 function startViewerServer(session_id: string): void {
-  const viewerPath = join(import.meta.dir, "viewer", "server.ts");
+  const viewerPath = join(import.meta.dir, "..", "viewer", "server.ts");
 
   try {
     // Spawn detached process that survives parent exit

@@ -65,7 +65,7 @@ import {
   type SubagentStartHookInput,
   type SyncHookJSONOutput,
 } from "@anthropic-ai/claude-agent-sdk";
-import { log, readInput, writeOutput } from "./utils/logger.ts";
+import { log, readInput, writeOutput } from "../utils/logger.ts";
 
 // Read and parse the hook input from stdin
 const input = await readInput<SubagentStartHookInput>();
