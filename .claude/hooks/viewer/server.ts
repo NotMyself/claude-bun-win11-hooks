@@ -1,6 +1,7 @@
 import { SERVER_CONFIG, PATHS, SSE_CONFIG, CURRENT_SESSION_ENV } from "./config";
 import { LogFileWatcher } from "./watcher";
 import type { LogEntry, SSEMessage, SessionListResponse } from "./types";
+import { DashboardService } from "./dashboard";
 
 /**
  * MIME types for static files
@@ -18,6 +19,11 @@ const MIME_TYPES: Record<string, string> = {
  */
 const watcher = new LogFileWatcher();
 watcher.start();
+
+/**
+ * Dashboard service instance
+ */
+const dashboardService = new DashboardService();
 
 const currentSessionId = process.env[CURRENT_SESSION_ENV] || null;
 
@@ -172,6 +178,20 @@ async function handleRequest(request: Request): Promise<Response> {
         "Access-Control-Allow-Origin": "*",
       },
     });
+  }
+
+  // Route: GET /api/dashboard -> Dashboard data
+  if (path === "/api/dashboard" && request.method === "GET") {
+    try {
+      const data = await dashboardService.getData();
+      return Response.json(data);
+    } catch (error) {
+      console.error("Dashboard error:", error);
+      return Response.json(
+        { error: "Failed to load dashboard data" },
+        { status: 500 }
+      );
+    }
   }
 
   // Route: POST /shutdown -> Gracefully shut down the server
