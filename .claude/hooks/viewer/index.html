@@ -670,9 +670,12 @@
       },
       methods: {
         cleanupPaths(json) {
-          // Replace Windows home directory with ~
-          // JSON.stringify escapes backslashes, so C:\Users becomes C:\\Users in the string
-          json = json.replace(/C:\\\\Users\\\\BobbyJohnson/g, '~');
+          // Replace home directory paths with ~ for readability
+          // Supports Windows (C:\Users\<name>), Linux (/home/<name>), macOS (/Users/<name>)
+          // JSON.stringify escapes backslashes, so patterns account for \\\\
+          json = json.replace(/C:\\\\Users\\\\[^\\\\]+/g, '~');
+          json = json.replace(/\/home\/[^/]+/g, '~');
+          json = json.replace(/\/Users\/[^/]+/g, '~');
 
           // Convert remaining escaped backslashes to forward slashes for readability
           json = json.replace(/\\\\/g, '/');
