@@ -9,7 +9,7 @@ export default defineConfig({
     setupFiles: ['./viewer/__tests__/setup.ts'],
 
     // Include test files (relative to project root when config is loaded with --config)
-    include: ['viewer/__tests__/**/*.test.ts', 'utils/__tests__/**/*.test.ts'],
+    include: ['viewer/__tests__/**/*.test.ts', 'utils/__tests__/**/*.test.ts', 'handlers/__tests__/**/*.test.ts'],
 
     // Global test utilities
     globals: true,
@@ -18,8 +18,8 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      include: ['viewer/*.ts', 'utils/*.ts'],
-      exclude: ['viewer/__tests__/**', 'utils/__tests__/**', 'viewer/vitest.config.ts'],
+      include: ['viewer/*.ts', 'utils/*.ts', 'handlers/*.ts'],
+      exclude: ['viewer/__tests__/**', 'utils/__tests__/**', 'handlers/__tests__/**', 'viewer/vitest.config.ts'],
     },
   },
 });
