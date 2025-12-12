@@ -39,6 +39,25 @@ export const PATHS = {
 
   /** Path to logo.svg */
   LOGO_SVG: join(import.meta.dir, "logo.svg"),
+
+  /** User's Claude home directory (~/.claude) */
+  CLAUDE_HOME: process.env.USERPROFILE
+    ? join(process.env.USERPROFILE, ".claude")
+    : join(process.env.HOME || "", ".claude"),
+
+  /** Path to global stats cache file */
+  get STATS_CACHE() {
+    return join(this.CLAUDE_HOME, "stats-cache.json");
+  },
+
+  /** Path to commands directory */
+  COMMANDS_DIR: resolve(import.meta.dir, "..", "..", "commands"),
+
+  /** Path to skills directory */
+  SKILLS_DIR: resolve(import.meta.dir, "..", "..", "skills"),
+
+  /** Path to settings.json */
+  SETTINGS_FILE: resolve(import.meta.dir, "..", "..", "settings.json"),
 } as const;
 
 /**
@@ -63,4 +82,18 @@ export const SSE_CONFIG = {
 export const WATCHER_CONFIG = {
   /** Poll interval for file changes in milliseconds */
   POLL_INTERVAL: 500, // 500ms
+} as const;
+
+/**
+ * Dashboard-specific configuration
+ */
+export const DASHBOARD_CONFIG = {
+  /** Session considered inactive after this many ms without heartbeat */
+  HEARTBEAT_TIMEOUT_MS: 60_000, // 60 seconds
+
+  /** Minimum interval between heartbeat writes */
+  HEARTBEAT_INTERVAL_MS: 30_000, // 30 seconds
+
+  /** Dashboard data refresh interval for UI polling */
+  REFRESH_INTERVAL_MS: 5_000, // 5 seconds
 } as const;
