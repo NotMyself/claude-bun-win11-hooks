@@ -36,6 +36,9 @@ export const PATHS = {
 
   /** Path to styles directory */
   STYLES_DIR: join(import.meta.dir, "styles"),
+
+  /** Path to logo.svg */
+  LOGO_SVG: join(import.meta.dir, "logo.svg"),
 } as const;
 
 /**

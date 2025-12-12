@@ -147,15 +147,13 @@ async function main(): Promise<void> {
     started_at: new Date().toISOString(),
   });
 
-  // === Start viewer on fresh startup ===
-  if (input.source === "startup") {
-    const viewerRunning = await isViewerRunning();
+  // === Ensure viewer is always running ===
+  const viewerRunning = await isViewerRunning();
 
-    if (!viewerRunning) {
-      startViewerServer(input.session_id);
-    } else {
-      console.error(`\n🔍 Hook Viewer: ${VIEWER_URL}\n`);
-    }
+  if (!viewerRunning) {
+    startViewerServer(input.session_id);
+  } else {
+    console.error(`\n🔍 Hook Viewer: ${VIEWER_URL}\n`);
   }
 
   // Build the output response

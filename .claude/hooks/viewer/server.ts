@@ -10,6 +10,7 @@ const MIME_TYPES: Record<string, string> = {
   ".css": "text/css",
   ".js": "application/javascript",
   ".json": "application/json",
+  ".svg": "image/svg+xml",
 };
 
 /**
@@ -139,6 +140,11 @@ async function handleRequest(request: Request): Promise<Response> {
     return serveFile(filePath);
   }
 
+  // Route: GET /logo.svg -> logo image
+  if (path === "/logo.svg" && request.method === "GET") {
+    return serveFile(PATHS.LOGO_SVG);
+  }
+
   // Route: GET /events -> SSE stream
   if (path === "/events" && request.method === "GET") {
     const session = url.searchParams.get("session") || currentSessionId;
@@ -161,6 +167,23 @@ async function handleRequest(request: Request): Promise<Response> {
     }
     const entries = watcher.getAllEntries();
     return new Response(JSON.stringify(entries), {
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
+    });
+  }
+
+  // Route: POST /shutdown -> Gracefully shut down the server
+  if (path === "/shutdown" && request.method === "POST") {
+    console.log("\n🛑 Shutdown requested via API");
+    // Respond before shutting down
+    setTimeout(() => {
+      watcher.stop();
+      server.stop();
+      process.exit(0);
+    }, 100);
+    return new Response(JSON.stringify({ status: "shutting_down" }), {
       headers: {
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",

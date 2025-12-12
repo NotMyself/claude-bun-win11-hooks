@@ -54,6 +54,32 @@ import {
 } from "@anthropic-ai/claude-agent-sdk";
 import { log, readInput, writeOutput } from "../utils/logger.ts";
 
+/**
+ * Viewer server configuration
+ */
+const VIEWER_PORT = 3456;
+const VIEWER_URL = `http://localhost:${VIEWER_PORT}`;
+
+/**
+ * Gracefully shut down the viewer server
+ */
+async function shutdownViewer(): Promise<void> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
+
+    await fetch(`${VIEWER_URL}/shutdown`, {
+      method: "POST",
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+    console.error("\n🛑 Hook Viewer shut down\n");
+  } catch {
+    // Viewer not running or already stopped - ignore
+  }
+}
+
 // Read and parse the hook input from stdin
 const input = await readInput<SessionEndHookInput>();
 
@@ -65,6 +91,9 @@ await log("SessionEnd", input.session_id, {
   permission_mode: input.permission_mode,
   ended_at: new Date().toISOString(),
 });
+
+// Shut down the viewer server
+await shutdownViewer();
 
 // Build the output response
 // SessionEnd doesn't support hookSpecificOutput, just continue
