@@ -1,6 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { DashboardService } from "../dashboard";
 import type { LogEntry, SessionStatus } from "../types";
+
+// Create mock functions using vi.hoisted() so they're available before vi.mock() runs
+const { mockExistsSync, mockReaddirSync, mockReadFileSync, mockListSessions } = vi.hoisted(() => ({
+  mockExistsSync: vi.fn(),
+  mockReaddirSync: vi.fn(),
+  mockReadFileSync: vi.fn(),
+  mockListSessions: vi.fn(),
+}));
 
 // Mock config module before other imports
 vi.mock("../config", () => ({
@@ -25,46 +32,48 @@ vi.mock("../config", () => ({
   CURRENT_SESSION_ENV: "CLAUDE_HOOKS_VIEWER_SESSION",
 }));
 
-// Mock node:fs
+// Mock node:fs with shared mock functions
 vi.mock("node:fs", () => ({
   default: {
-    existsSync: vi.fn(),
-    readdirSync: vi.fn(),
-    readFileSync: vi.fn(),
+    existsSync: mockExistsSync,
+    readdirSync: mockReaddirSync,
+    readFileSync: mockReadFileSync,
   },
-  existsSync: vi.fn(),
-  readdirSync: vi.fn(),
-  readFileSync: vi.fn(),
+  existsSync: mockExistsSync,
+  readdirSync: mockReaddirSync,
+  readFileSync: mockReadFileSync,
 }));
 
-// Mock watcher
+// Mock watcher with shared mock function
 vi.mock("../watcher", () => ({
   LogFileWatcher: {
-    listSessions: vi.fn(),
+    listSessions: mockListSessions,
   },
 }));
 
-// Import mocked modules
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { LogFileWatcher } from "../watcher";
+// Import DashboardService after mocks are set up
+import { DashboardService } from "../dashboard";
 
 describe("DashboardService", () => {
   let service: DashboardService;
 
   beforeEach(() => {
+    // Clear all mocks before each test
+    vi.clearAllMocks();
+
     service = new DashboardService();
     // Reset and set default implementations for all mocks
-    vi.mocked(LogFileWatcher.listSessions).mockResolvedValue([]);
-    vi.mocked(existsSync).mockReturnValue(false);
-    vi.mocked(readFileSync).mockReturnValue("");
-    vi.mocked(readdirSync).mockReturnValue([] as any);
+    mockListSessions.mockResolvedValue([]);
+    mockExistsSync.mockReturnValue(false);
+    mockReadFileSync.mockReturnValue("");
+    mockReaddirSync.mockReturnValue([] as any);
   });
 
   describe("getData", () => {
     it("returns complete dashboard data structure", async () => {
       // Setup mocks
-      vi.mocked(LogFileWatcher.listSessions).mockResolvedValue([]);
-      vi.mocked(existsSync).mockReturnValue(false);
+      mockListSessions.mockResolvedValue([]);
+      mockExistsSync.mockReturnValue(false);
 
       const data = await service.getData();
 
@@ -95,9 +104,9 @@ describe("DashboardService", () => {
         { timestamp: "2024-01-01T01:00:00Z", event: "SessionEnd", session_id: "test-session", data: {} },
       ];
 
-      vi.mocked(LogFileWatcher.listSessions).mockResolvedValue([mockSessionInfo]);
-      vi.mocked(existsSync).mockImplementation((path) => String(path).includes("test-session.txt"));
-      vi.mocked(readFileSync).mockImplementation((path) => {
+      mockListSessions.mockResolvedValue([mockSessionInfo]);
+      mockExistsSync.mockImplementation((path: string) => String(path).includes("test-session.txt"));
+      mockReadFileSync.mockImplementation((path: string) => {
         if (String(path).includes("test-session.txt")) {
           return entries.map((e) => JSON.stringify(e)).join("\n");
         }
@@ -117,9 +126,9 @@ describe("DashboardService", () => {
         { timestamp: now.toISOString(), event: "SessionStart", session_id: "test-session", data: {} },
       ];
 
-      vi.mocked(LogFileWatcher.listSessions).mockResolvedValue([mockSessionInfo]);
-      vi.mocked(existsSync).mockImplementation((path) => String(path).includes("test-session.txt"));
-      vi.mocked(readFileSync).mockImplementation((path) => {
+      mockListSessions.mockResolvedValue([mockSessionInfo]);
+      mockExistsSync.mockImplementation((path: string) => String(path).includes("test-session.txt"));
+      mockReadFileSync.mockImplementation((path: string) => {
         if (String(path).includes("test-session.txt")) {
           return entries.map((e) => JSON.stringify(e)).join("\n");
         }
@@ -138,9 +147,9 @@ describe("DashboardService", () => {
         { timestamp: oldTime, event: "UserPromptSubmit", session_id: "test-session", data: {} },
       ];
 
-      vi.mocked(LogFileWatcher.listSessions).mockResolvedValue([mockSessionInfo]);
-      vi.mocked(existsSync).mockImplementation((path) => String(path).includes("test-session.txt"));
-      vi.mocked(readFileSync).mockImplementation((path) => {
+      mockListSessions.mockResolvedValue([mockSessionInfo]);
+      mockExistsSync.mockImplementation((path: string) => String(path).includes("test-session.txt"));
+      mockReadFileSync.mockImplementation((path: string) => {
         if (String(path).includes("test-session.txt")) {
           return entries.map((e) => JSON.stringify(e)).join("\n");
         }
@@ -159,9 +168,9 @@ describe("DashboardService", () => {
         { timestamp: recentTime, event: "UserPromptSubmit", session_id: "test-session", data: {} },
       ];
 
-      vi.mocked(LogFileWatcher.listSessions).mockResolvedValue([mockSessionInfo]);
-      vi.mocked(existsSync).mockImplementation((path) => String(path).includes("test-session.txt"));
-      vi.mocked(readFileSync).mockImplementation((path) => {
+      mockListSessions.mockResolvedValue([mockSessionInfo]);
+      mockExistsSync.mockImplementation((path: string) => String(path).includes("test-session.txt"));
+      mockReadFileSync.mockImplementation((path: string) => {
         if (String(path).includes("test-session.txt")) {
           return entries.map((e) => JSON.stringify(e)).join("\n");
         }
@@ -193,9 +202,9 @@ describe("DashboardService", () => {
         { timestamp: now, event: "PostToolUseFailure", session_id: "stats-test", data: {} },
       ];
 
-      vi.mocked(LogFileWatcher.listSessions).mockResolvedValue([mockSessionInfo]);
-      vi.mocked(existsSync).mockImplementation((path) => String(path).includes("stats-test.txt"));
-      vi.mocked(readFileSync).mockImplementation((path) => {
+      mockListSessions.mockResolvedValue([mockSessionInfo]);
+      mockExistsSync.mockImplementation((path: string) => String(path).includes("stats-test.txt"));
+      mockReadFileSync.mockImplementation((path: string) => {
         if (String(path).includes("stats-test.txt")) {
           return entries.map((e) => JSON.stringify(e)).join("\n");
         }
@@ -215,9 +224,9 @@ describe("DashboardService", () => {
         { timestamp: now, event: "UserPromptSubmit", session_id: "stats-test", data: {} },
       ];
 
-      vi.mocked(LogFileWatcher.listSessions).mockResolvedValue([mockSessionInfo]);
-      vi.mocked(existsSync).mockImplementation((path) => String(path).includes("stats-test.txt"));
-      vi.mocked(readFileSync).mockImplementation((path) => {
+      mockListSessions.mockResolvedValue([mockSessionInfo]);
+      mockExistsSync.mockImplementation((path: string) => String(path).includes("stats-test.txt"));
+      mockReadFileSync.mockImplementation((path: string) => {
         if (String(path).includes("stats-test.txt")) {
           return entries.map((e) => JSON.stringify(e)).join("\n");
         }
@@ -236,9 +245,9 @@ describe("DashboardService", () => {
         { timestamp: now, event: "PreCompact", session_id: "stats-test", data: {} },
       ];
 
-      vi.mocked(LogFileWatcher.listSessions).mockResolvedValue([mockSessionInfo]);
-      vi.mocked(existsSync).mockImplementation((path) => String(path).includes("stats-test.txt"));
-      vi.mocked(readFileSync).mockImplementation((path) => {
+      mockListSessions.mockResolvedValue([mockSessionInfo]);
+      mockExistsSync.mockImplementation((path: string) => String(path).includes("stats-test.txt"));
+      mockReadFileSync.mockImplementation((path: string) => {
         if (String(path).includes("stats-test.txt")) {
           return entries.map((e) => JSON.stringify(e)).join("\n");
         }
@@ -253,13 +262,13 @@ describe("DashboardService", () => {
 
   describe("configuration parsing", () => {
     it("parses commands from markdown frontmatter", async () => {
-      vi.mocked(LogFileWatcher.listSessions).mockResolvedValue([]);
-      vi.mocked(existsSync).mockImplementation((path) => String(path).includes("commands"));
-      vi.mocked(readdirSync).mockImplementation((path) => {
+      mockListSessions.mockResolvedValue([]);
+      mockExistsSync.mockImplementation((path: string) => String(path).includes("commands"));
+      mockReaddirSync.mockImplementation((path: string) => {
         if (String(path).includes("commands")) return ["test-cmd.md"] as any;
         return [] as any;
       });
-      vi.mocked(readFileSync).mockImplementation((path) => {
+      mockReadFileSync.mockImplementation((path: string) => {
         if (String(path).includes("test-cmd.md")) {
           return `---
 description: Test command description
@@ -279,13 +288,13 @@ argument-hint: <arg>
     });
 
     it("parses skills from markdown frontmatter", async () => {
-      vi.mocked(LogFileWatcher.listSessions).mockResolvedValue([]);
-      vi.mocked(existsSync).mockImplementation((path) => String(path).includes("skills"));
-      vi.mocked(readdirSync).mockImplementation((path) => {
+      mockListSessions.mockResolvedValue([]);
+      mockExistsSync.mockImplementation((path: string) => String(path).includes("skills"));
+      mockReaddirSync.mockImplementation((path: string) => {
         if (String(path).includes("skills")) return ["test-skill.md"] as any;
         return [] as any;
       });
-      vi.mocked(readFileSync).mockImplementation((path) => {
+      mockReadFileSync.mockImplementation((path: string) => {
         if (String(path).includes("test-skill.md")) {
           return `---
 name: Test Skill
@@ -306,8 +315,8 @@ description: A test skill
 
   describe("error handling", () => {
     it("handles missing files gracefully", async () => {
-      vi.mocked(LogFileWatcher.listSessions).mockResolvedValue([]);
-      vi.mocked(existsSync).mockReturnValue(false);
+      mockListSessions.mockResolvedValue([]);
+      mockExistsSync.mockReturnValue(false);
 
       const data = await service.getData();
 
@@ -329,9 +338,9 @@ description: A test skill
         size_bytes: 100,
       };
 
-      vi.mocked(LogFileWatcher.listSessions).mockResolvedValue([mockSessionInfo]);
-      vi.mocked(existsSync).mockImplementation((path) => String(path).includes("bad-json.txt"));
-      vi.mocked(readFileSync).mockImplementation((path) => {
+      mockListSessions.mockResolvedValue([mockSessionInfo]);
+      mockExistsSync.mockImplementation((path: string) => String(path).includes("bad-json.txt"));
+      mockReadFileSync.mockImplementation((path: string) => {
         if (String(path).includes("bad-json.txt")) {
           return "not valid json\n";
         }
