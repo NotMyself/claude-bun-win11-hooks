@@ -66,61 +66,18 @@ import {
   type SyncHookJSONOutput,
 } from "@anthropic-ai/claude-agent-sdk";
 import { spawn } from "bun";
-import { mkdir } from "fs/promises";
 import { join } from "path";
 import { log, readInput, writeOutput } from "./utils/logger.ts";
 import { CURRENT_SESSION_ENV } from "./viewer/config";
 
-/**
- * Convert Windows path to Docker-compatible path format.
- * Transforms drive letters and backslashes for Docker volume mounts.
- *
- * @example
- * toDockerPath("C:\\Users\\foo\\project") // "/C/Users/foo/project"
- * toDockerPath("D:\\work\\repo") // "/D/work/repo"
- *
- * @param windowsPath - Windows-style path with backslashes
- * @returns Docker-compatible path with forward slashes
- */
-function toDockerPath(windowsPath: string): string {
-  return windowsPath
-    .replace(/\\/g, "/")
-    .replace(/^([A-Za-z]):/, "/$1");
-}
-
-/**
- * Configure Playwright MCP to save screenshots to the current project's
- * screenshots directory. Creates the directory if it doesn't exist.
- *
- * This runs the Docker MCP CLI to set the outputDir configuration.
- * Fails silently since screenshot location is non-critical.
- *
- * @param cwd - Current working directory (Windows path)
- */
-async function configurePlaywrightScreenshots(cwd: string): Promise<void> {
-  const screenshotsDir = join(cwd, "screenshots");
-  const dockerPath = toDockerPath(screenshotsDir);
-
-  try {
-    // Create screenshots directory if it doesn't exist
-    await mkdir(screenshotsDir, { recursive: true });
-
-    // Configure Playwright MCP via Docker CLI
-    // Uses 'docker mcp config write' with JSON to set outputDir
-    const configJson = JSON.stringify({ playwright: { outputDir: dockerPath } });
-    const proc = spawn([
-      "docker", "mcp", "config", "write", configJson
-    ], {
-      stdout: "ignore",
-      stderr: "ignore",
-    });
-
-    await proc.exited;
-  } catch {
-    // Fail silently - screenshot location is non-critical
-    console.error("Failed to configure Playwright screenshots directory");
-  }
-}
+// Note: Playwright MCP screenshot directory configuration was removed.
+// The Docker MCP Playwright image doesn't support custom output directories
+// via config because:
+// 1. The image hardcodes PLAYWRIGHT_MCP_OUTPUT_DIR=/tmp/playwright-output
+// 2. Docker MCP config values don't translate to container env vars or volumes
+// 3. The Playwright catalog entry lacks volume mount configuration
+//
+// Screenshots are still accessible - they're returned inline in tool responses.
 
 /**
  * Viewer server configuration
@@ -192,9 +149,6 @@ async function main(): Promise<void> {
 
   // === Start viewer on fresh startup ===
   if (input.source === "startup") {
-    // Configure Playwright MCP to save screenshots to project directory
-    await configurePlaywrightScreenshots(input.cwd);
-
     const viewerRunning = await isViewerRunning();
 
     if (!viewerRunning) {

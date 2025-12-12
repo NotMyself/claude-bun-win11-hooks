@@ -1,36 +1,46 @@
 # Auto-Configure Playwright MCP Screenshots per Project
 
-Automatically save Playwright MCP screenshots to a `screenshots/` folder in the current project directory.
+**STATUS: NOT WORKING - Docker MCP Architecture Limitation**
 
-## Orchestration Guide
+## Problem
 
-Execute prompts in order using `/orchestrate-plan dev/active/playwright-screenshots`:
+The Playwright MCP Docker image doesn't support custom output directories via `docker mcp config` because:
 
-| Order | Prompt | Feature | Status |
-|-------|--------|---------|--------|
-| 1 | `prompts/01-path-utils.md` | Windows to Docker path conversion | pending |
-| 2 | `prompts/02-playwright-config.md` | Playwright MCP configuration function | pending |
-| 3 | `prompts/03-session-start-integration.md` | SessionStart hook integration | pending |
-| 4 | `prompts/04-e2e-validation.md` | End-to-end validation | pending |
+1. **Hardcoded environment variable**: The Dockerfile sets `ENV PLAYWRIGHT_MCP_OUTPUT_DIR=/tmp/playwright-output`
+2. **Config doesn't translate to env vars**: Values set via `docker mcp config write` don't become container environment variables
+3. **No volume mount support**: The Playwright catalog entry lacks `volumes` configuration (unlike the filesystem server which explicitly defines volume mounts)
+4. **Container isolation**: Without volume mounts, host paths like `/C/Users/...` don't exist inside the Linux container
 
-## Quick Start
+## What Was Tried
+
+1. Setting `outputDir` via `docker mcp config write` - ignored by container
+2. Setting `PLAYWRIGHT_MCP_OUTPUT_DIR` via `docker mcp config write` - not passed as env var
+3. Using `mcp-config-set` MCP tool - same issue
+4. Creating a custom catalog entry with `volumes` configuration - complex and didn't resolve
+
+## Workarounds
+
+### Option 1: Screenshots in Tool Response (Current State)
+Screenshots ARE returned inline in the MCP tool response. Claude Code displays them, so they're accessible - just not saved to the host filesystem.
+
+### Option 2: Custom Docker Image (Manual)
+Build a custom Playwright MCP image that mounts a host directory:
 
 ```bash
-# Run all prompts sequentially
-/orchestrate-plan dev/active/playwright-screenshots
-
-# Or run manually one at a time
-# Read each prompt file and execute its instructions
+# Not implemented - would require custom Docker setup
 ```
 
-## Files
+### Option 3: Request Feature from Docker
+Ask Docker/Microsoft to add volume mount configuration to the official Playwright MCP catalog entry.
 
-- `features.json` - Feature tracking with status
-- `constraints.md` - Global rules for all prompts
-- `prompts/` - Individual feature prompts
+## Original Plan Files
 
-## File Modified
-- `.claude/hooks/session-start.ts`
+- `constraints.md` - Implementation constraints
+- `prompts/` - Original implementation prompts (now obsolete)
 
-## Verification
-After implementation, start a new session and take a screenshot - it should appear in `./screenshots/` in the current project.
+## Related Commits
+
+The SessionStart hook integration was implemented but has been removed since it doesn't work:
+- `fae589d` - Added toDockerPath utility (removed)
+- `b6af30a` - Added configurePlaywrightScreenshots function (removed)
+- `f997e4d` - Integrated into session startup (removed)
