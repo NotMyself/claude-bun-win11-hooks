@@ -2,6 +2,7 @@ import { SERVER_CONFIG, PATHS, SSE_CONFIG, CURRENT_SESSION_ENV, TIMING } from ".
 import { LogFileWatcher } from "./watcher";
 import type { LogEntry, SSEMessage, SessionListResponse } from "./types";
 import { DashboardService } from "./dashboard";
+import { SessionSummaryService } from "./session-summary";
 
 /**
  * MIME types for static files
@@ -24,6 +25,11 @@ watcher.start();
  * Dashboard service instance
  */
 const dashboardService = new DashboardService();
+
+/**
+ * Session summary service instance
+ */
+const sessionSummaryService = new SessionSummaryService();
 
 const currentSessionId = process.env[CURRENT_SESSION_ENV] || null;
 
@@ -189,6 +195,21 @@ async function handleRequest(request: Request): Promise<Response> {
       console.error("Dashboard error:", error);
       return Response.json(
         { error: "Failed to load dashboard data" },
+        { status: 500 }
+      );
+    }
+  }
+
+  // Route: GET /api/summaries -> Claude Code session summaries
+  if (path === "/api/summaries" && request.method === "GET") {
+    try {
+      const project = url.searchParams.get("project") || undefined;
+      const data = await sessionSummaryService.getSummaries(project);
+      return Response.json(data);
+    } catch (error) {
+      console.error("Session summaries error:", error);
+      return Response.json(
+        { error: "Failed to load session summaries" },
         { status: 500 }
       );
     }
