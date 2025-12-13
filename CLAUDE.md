@@ -26,6 +26,21 @@ A Claude Code hooks implementation using Bun on Windows. Features all 12 hooks w
 - SSE streaming for realtime updates
 - Vue.js single-file application
 
+### Security Features
+
+The viewer includes comprehensive security hardening:
+
+- **Network**: Binds to localhost only (configurable via `HOOK_VIEWER_HOST`)
+- **CORS**: Restricted to localhost origin only
+- **Path Traversal**: All file endpoints validate and sanitize paths
+- **Session Validation**: Session IDs validated (alphanumeric + hyphens, max 64 chars)
+- **Authentication**: `/shutdown` endpoint requires Bearer token
+- **Rate Limiting**: SSE connections limited to 5 per IP per 60s window
+- **CSP Headers**: Content Security Policy on HTML responses
+- **Error Handling**: All handlers output valid JSON even on errors
+
+Security utilities are in `viewer/security.ts` and `viewer/rate-limiter.ts`.
+
 ## Implemented Hooks
 
 | Hook | File | Purpose |
