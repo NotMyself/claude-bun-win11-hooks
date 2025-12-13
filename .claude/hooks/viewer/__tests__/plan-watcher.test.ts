@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { join } from "node:path";
 
 // Use vi.hoisted() for proper mock initialization
 const { mockExistsSync, mockReaddirSync, mockStatSync, mockReadFileSync } = vi.hoisted(() => ({
@@ -7,6 +8,10 @@ const { mockExistsSync, mockReaddirSync, mockStatSync, mockReadFileSync } = vi.h
   mockStatSync: vi.fn(),
   mockReadFileSync: vi.fn(),
 }));
+
+// Platform-agnostic mock paths (use join to get correct separators)
+const MOCK_ACTIVE_DIR = join("/mock", "dev", "active");
+const MOCK_COMPLETE_DIR = join("/mock", "dev", "complete");
 
 vi.mock("node:fs", () => ({
   default: {
@@ -21,17 +26,20 @@ vi.mock("node:fs", () => ({
   readFileSync: mockReadFileSync,
 }));
 
-vi.mock("../config", () => ({
-  PATHS: {
-    DEV_ACTIVE_DIR: "/mock/dev/active",
-    DEV_COMPLETE_DIR: "/mock/dev/complete",
-    getPlanFeaturesPath: (dir: string) => `${dir}/features.json`,
-  },
-  PLAN_CONFIG: {
-    POLL_INTERVAL_MS: 1000,
-    MAX_COMPLETED_PLANS: 10,
-  },
-}));
+vi.mock("../config", async () => {
+  const { join } = await import("node:path");
+  return {
+    PATHS: {
+      DEV_ACTIVE_DIR: join("/mock", "dev", "active"),
+      DEV_COMPLETE_DIR: join("/mock", "dev", "complete"),
+      getPlanFeaturesPath: (dir: string) => join(dir, "features.json"),
+    },
+    PLAN_CONFIG: {
+      POLL_INTERVAL_MS: 1000,
+      MAX_COMPLETED_PLANS: 10,
+    },
+  };
+});
 
 import { PlanWatcher } from "../plan-watcher";
 
@@ -70,9 +78,9 @@ describe("PlanWatcher", () => {
     });
 
     it("returns plans from active directory", () => {
+      const featuresPath = join(MOCK_ACTIVE_DIR, "test-plan", "features.json");
       mockExistsSync.mockImplementation((path: string) => {
-        return path === "/mock/dev/active" ||
-               path === "/mock/dev/active/test-plan/features.json";
+        return path === MOCK_ACTIVE_DIR || path === featuresPath;
       });
 
       mockReaddirSync.mockReturnValue([
@@ -98,18 +106,21 @@ describe("PlanWatcher", () => {
     });
 
     it("includes completed plans when requested", () => {
+      const activeFeaturesPath = join(MOCK_ACTIVE_DIR, "active-plan", "features.json");
+      const completedFeaturesPath = join(MOCK_COMPLETE_DIR, "completed-plan", "features.json");
+
       mockExistsSync.mockImplementation((path: string) => {
-        return path === "/mock/dev/active" ||
-               path === "/mock/dev/complete" ||
-               path === "/mock/dev/active/active-plan/features.json" ||
-               path === "/mock/dev/complete/completed-plan/features.json";
+        return path === MOCK_ACTIVE_DIR ||
+               path === MOCK_COMPLETE_DIR ||
+               path === activeFeaturesPath ||
+               path === completedFeaturesPath;
       });
 
       mockReaddirSync.mockImplementation((dir: string) => {
-        if (dir === "/mock/dev/active") {
+        if (dir === MOCK_ACTIVE_DIR) {
           return [{ name: "active-plan", isDirectory: () => true }];
         }
-        if (dir === "/mock/dev/complete") {
+        if (dir === MOCK_COMPLETE_DIR) {
           return [{ name: "completed-plan", isDirectory: () => true }];
         }
         return [];
@@ -135,7 +146,7 @@ describe("PlanWatcher", () => {
       mockExistsSync.mockReturnValue(true);
 
       mockReaddirSync.mockImplementation((dir: string) => {
-        if (dir === "/mock/dev/active") {
+        if (dir === MOCK_ACTIVE_DIR) {
           return [{ name: "test-plan", isDirectory: () => true }];
         }
         return [];
@@ -178,7 +189,7 @@ describe("PlanWatcher", () => {
 
     it("skips directories without features.json", () => {
       mockExistsSync.mockImplementation((path: string) => {
-        return path === "/mock/dev/active"; // features.json doesn't exist
+        return path === MOCK_ACTIVE_DIR; // features.json doesn't exist
       });
 
       mockReaddirSync.mockReturnValue([
@@ -201,8 +212,9 @@ describe("PlanWatcher", () => {
     });
 
     it("returns plan data from active directory", () => {
+      const featuresPath = join(MOCK_ACTIVE_DIR, "test-plan", "features.json");
       mockExistsSync.mockImplementation((path: string) => {
-        return path === "/mock/dev/active/test-plan/features.json";
+        return path === featuresPath;
       });
 
       mockReadFileSync.mockReturnValue(JSON.stringify(mockFeaturesJson));
@@ -216,8 +228,9 @@ describe("PlanWatcher", () => {
     });
 
     it("checks completed directory if not in active", () => {
+      const featuresPath = join(MOCK_COMPLETE_DIR, "old-plan", "features.json");
       mockExistsSync.mockImplementation((path: string) => {
-        return path === "/mock/dev/complete/old-plan/features.json";
+        return path === featuresPath;
       });
 
       mockReadFileSync.mockReturnValue(JSON.stringify(mockFeaturesJson));
@@ -295,9 +308,9 @@ describe("PlanWatcher", () => {
 
   describe("plan status calculation", () => {
     it("plan in dev/active has status 'active'", () => {
+      const featuresPath = join(MOCK_ACTIVE_DIR, "my-plan", "features.json");
       mockExistsSync.mockImplementation((path: string) => {
-        return path === "/mock/dev/active" ||
-               path === "/mock/dev/active/my-plan/features.json";
+        return path === MOCK_ACTIVE_DIR || path === featuresPath;
       });
 
       mockReaddirSync.mockReturnValue([
@@ -317,13 +330,13 @@ describe("PlanWatcher", () => {
     });
 
     it("plan in dev/complete has status 'completed'", () => {
+      const featuresPath = join(MOCK_COMPLETE_DIR, "old-plan", "features.json");
       mockExistsSync.mockImplementation((path: string) => {
-        return path === "/mock/dev/complete" ||
-               path === "/mock/dev/complete/old-plan/features.json";
+        return path === MOCK_COMPLETE_DIR || path === featuresPath;
       });
 
       mockReaddirSync.mockImplementation((dir: string) => {
-        if (dir === "/mock/dev/complete") {
+        if (dir === MOCK_COMPLETE_DIR) {
           return [{ name: "old-plan", isDirectory: () => true }];
         }
         return [];
