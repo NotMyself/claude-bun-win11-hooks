@@ -4,6 +4,7 @@ import { PlanWatcher } from "./plan-watcher";
 import type { LogEntry, SSEMessage, SessionListResponse, PlanListResponse, PlanUpdateMessage } from "./types";
 import { DashboardService } from "./dashboard";
 import { SessionSummaryService } from "./session-summary";
+import { validatePlanName, sanitizePathComponent, validatePathWithinBase } from "./security";
 
 /**
  * MIME types for static files
@@ -310,7 +311,14 @@ async function handleRequest(request: Request): Promise<Response> {
 
   // Route: GET /api/plans/:name -> Get specific plan data
   if (path.startsWith("/api/plans/") && request.method === "GET") {
-    const name = path.replace("/api/plans/", "");
+    const rawName = path.replace("/api/plans/", "");
+
+    // Validate plan name format
+    const name = validatePlanName(rawName);
+    if (!name) {
+      return Response.json({ error: "Invalid plan name" }, { status: 400 });
+    }
+
     const plan = planWatcher.getPlan(name);
     if (!plan) {
       return Response.json({ error: "Plan not found" }, { status: 404 });
