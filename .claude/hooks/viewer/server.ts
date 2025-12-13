@@ -106,7 +106,7 @@ function handleSSE(request: Request): Response {
         try {
           controller.enqueue(encoder.encode(formatSSE("entry", entry)));
         } catch {
-          // Client disconnected
+          // Expected: client disconnected during SSE write
         }
       });
 
@@ -119,7 +119,7 @@ function handleSSE(request: Request): Response {
           };
           controller.enqueue(encoder.encode(formatSSE("heartbeat", heartbeat)));
         } catch {
-          // Client disconnected
+          // Expected: client disconnected during heartbeat
         }
       }, SSE_CONFIG.HEARTBEAT_INTERVAL);
     },
@@ -165,7 +165,7 @@ function handlePlanSSE(): Response {
           };
           controller.enqueue(encoder.encode(formatSSE("plan_update", message)));
         } catch {
-          // Client disconnected
+          // Expected: client disconnected during plan update
         }
       });
 
@@ -176,7 +176,7 @@ function handlePlanSSE(): Response {
             encoder.encode(formatSSE("heartbeat", { timestamp: new Date().toISOString() }))
           );
         } catch {
-          // Client disconnected
+          // Expected: client disconnected during plan heartbeat
         }
       }, SSE_CONFIG.HEARTBEAT_INTERVAL);
     },

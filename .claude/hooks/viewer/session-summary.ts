@@ -206,7 +206,8 @@ export class SessionSummaryService {
         .filter((dirent) => dirent.isDirectory())
         .map((dirent) => dirent.name)
         .sort();
-    } catch {
+    } catch (error) {
+      console.error("Failed to list projects:", error);
       return [];
     }
   }
@@ -351,8 +352,8 @@ export class SessionSummaryService {
           if (msg.type === "summary" && msg.summary && !description) {
             description = msg.summary;
           }
-        } catch {
-          // Skip invalid JSON lines
+        } catch (error) {
+          console.error("Failed to parse session JSON line:", error);
         }
       }
 

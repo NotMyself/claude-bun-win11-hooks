@@ -127,7 +127,8 @@ export class PlanWatcher {
     try {
       const content = readFileSync(path, "utf-8");
       return JSON.parse(content) as PlanData;
-    } catch {
+    } catch (error) {
+      console.error("Failed to read plan data:", error);
       return null;
     }
   }
@@ -166,7 +167,8 @@ export class PlanWatcher {
         status,
         lastModified: stats.mtime.toISOString(),
       };
-    } catch {
+    } catch (error) {
+      console.error("Failed to read plan info:", error);
       return null;
     }
   }
@@ -180,8 +182,8 @@ export class PlanWatcher {
       try {
         const stats = statSync(plan.path);
         this.planCache.set(plan.path, { mtime: stats.mtimeMs, data: plan });
-      } catch {
-        // Ignore errors during initial scan
+      } catch (error) {
+        console.error("Failed to stat plan file during initial scan:", error);
       }
     }
   }
@@ -205,8 +207,8 @@ export class PlanWatcher {
           this.planCache.set(plan.path, { mtime: stats.mtimeMs, data: plan });
           this.emit(plan);
         }
-      } catch {
-        // File may have been deleted
+      } catch (error) {
+        console.error("Failed to check plan for changes:", error);
       }
     }
 

@@ -114,7 +114,7 @@ export function validatePlanName(name: string): string | null {
   try {
     decoded = decodeURIComponent(name);
   } catch {
-    return null;
+    return null; // Invalid encoding
   }
 
   // Reject null bytes
