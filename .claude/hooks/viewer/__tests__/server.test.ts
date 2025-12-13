@@ -121,7 +121,7 @@ describe('Server', () => {
     it('has CORS header', async () => {
       const response = await fetch(`${BASE_URL}/api/entries`);
 
-      expect(response.headers.get('access-control-allow-origin')).toBe('*');
+      expect(response.headers.get('access-control-allow-origin')).toBe('http://localhost:3456');
     });
   });
 

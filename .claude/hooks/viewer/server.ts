@@ -4,7 +4,7 @@ import { PlanWatcher } from "./plan-watcher";
 import type { LogEntry, SSEMessage, SessionListResponse, PlanListResponse, PlanUpdateMessage } from "./types";
 import { DashboardService } from "./dashboard";
 import { SessionSummaryService } from "./session-summary";
-import { validatePlanName, sanitizePathComponent, validatePathWithinBase, validateSessionId, generateAuthToken, verifyAuthToken } from "./security";
+import { validatePlanName, sanitizePathComponent, validatePathWithinBase, validateSessionId, generateAuthToken, verifyAuthToken, getLocalhostOrigin } from "./security";
 import { RateLimiter, DEFAULT_RATE_LIMIT } from "./rate-limiter";
 
 // Generate auth token on startup (allow env var override for testing)
@@ -146,7 +146,7 @@ function handleSSE(request: Request): Response {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       "Connection": "keep-alive",
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": getLocalhostOrigin(SERVER_CONFIG.PORT),
     },
   });
 }
@@ -202,7 +202,7 @@ function handlePlanSSE(): Response {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       "Connection": "keep-alive",
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": getLocalhostOrigin(SERVER_CONFIG.PORT),
     },
   });
 }
@@ -277,7 +277,7 @@ async function handleRequest(request: Request): Promise<Response> {
     return new Response(JSON.stringify(entries), {
       headers: {
         "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": getLocalhostOrigin(SERVER_CONFIG.PORT),
       },
     });
   }
@@ -336,7 +336,7 @@ async function handleRequest(request: Request): Promise<Response> {
     return new Response(JSON.stringify({ status: "shutting_down" }), {
       headers: {
         "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": getLocalhostOrigin(SERVER_CONFIG.PORT),
       },
     });
   }
