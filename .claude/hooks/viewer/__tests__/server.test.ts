@@ -65,6 +65,14 @@ describe('Server', () => {
       expect(response.headers.get('content-type')).toContain('text/html');
     });
 
+    it('has security headers', async () => {
+      const response = await fetch(BASE_URL);
+
+      expect(response.headers.get('content-security-policy')).toContain("default-src 'self'");
+      expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+      expect(response.headers.get('x-frame-options')).toBe('DENY');
+    });
+
     it('contains Vue app', async () => {
       const response = await fetch(BASE_URL);
       const html = await response.text();

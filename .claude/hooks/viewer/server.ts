@@ -22,6 +22,19 @@ const MIME_TYPES: Record<string, string> = {
 };
 
 /**
+ * Content Security Policy for HTML responses.
+ * Restricts script sources to prevent XSS.
+ */
+const CSP_HEADER = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",  // Vue.js needs inline
+  "style-src 'self' 'unsafe-inline'",   // Vue.js needs inline
+  "img-src 'self' data:",
+  "connect-src 'self'",
+  "frame-ancestors 'none'",
+].join("; ");
+
+/**
  * File watcher instance
  */
 const watcher = new LogFileWatcher();
@@ -73,9 +86,19 @@ async function serveFile(path: string): Promise<Response> {
     return new Response("Not Found", { status: 404 });
   }
 
-  return new Response(file, {
-    headers: { "Content-Type": getMimeType(path) },
-  });
+  const mimeType = getMimeType(path);
+  const headers: Record<string, string> = {
+    "Content-Type": mimeType,
+  };
+
+  // Add CSP header for HTML files
+  if (mimeType === "text/html") {
+    headers["Content-Security-Policy"] = CSP_HEADER;
+    headers["X-Content-Type-Options"] = "nosniff";
+    headers["X-Frame-Options"] = "DENY";
+  }
+
+  return new Response(file, { headers });
 }
 
 /**
