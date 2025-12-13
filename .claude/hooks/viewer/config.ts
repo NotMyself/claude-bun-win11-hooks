@@ -5,10 +5,10 @@ import { join, resolve } from "path";
  */
 export const SERVER_CONFIG = {
   /** HTTP server port */
-  PORT: 3456,
+  PORT: parseInt(process.env.HOOK_VIEWER_PORT || "3456", 10),
 
-  /** Hostname to bind to (0.0.0.0 allows external connections) */
-  HOST: "0.0.0.0",
+  /** Hostname to bind to (127.0.0.1 localhost only, override with HOOK_VIEWER_HOST) */
+  HOST: process.env.HOOK_VIEWER_HOST || "127.0.0.1",
 
   /** Full server URL */
   get URL() {
