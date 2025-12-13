@@ -79,4 +79,11 @@ async function main(): Promise<void> {
   writeOutput(output);
 }
 
-await main();
+try {
+  await main();
+} catch (error) {
+  console.error("Handler error:", error);
+  // Always output valid JSON
+  writeOutput({ continue: true });
+  process.exit(1);
+}
