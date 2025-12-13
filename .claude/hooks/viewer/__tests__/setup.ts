@@ -67,3 +67,15 @@ beforeAll(() => {
   // Suppress expected console errors during tests
   vi.spyOn(console, 'error').mockImplementation(() => {});
 });
+
+// ===== Suppress happy-dom SSE stream errors =====
+// happy-dom throws "Controller is already closed" when SSE connections are aborted
+// This is expected behavior during test teardown, not an actual error
+process.on('uncaughtException', (error: Error & { code?: string }) => {
+  if (error.code === 'ERR_INVALID_STATE' && error.message.includes('Controller is already closed')) {
+    // Suppress this expected error from happy-dom SSE handling
+    return;
+  }
+  // Re-throw unexpected errors
+  throw error;
+});
