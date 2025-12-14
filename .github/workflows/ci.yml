@@ -59,7 +59,7 @@ jobs:
 
       - name: Test handler execution
         run: |
-          echo '{"session_id":"test"}' | bun run dist/handlers/session-start.bundle.js
+          echo '{"session_id":"test"}' | bun run dist/handlers/session-start.js
         shell: bash
 
   version-check:
@@ -72,7 +72,7 @@ jobs:
         run: |
           PLUGIN_VERSION=$(jq -r '.version' .claude-plugin/plugin.json)
           PACKAGE_VERSION=$(jq -r '.version' hooks/package.json)
-          CHANGELOG_VERSION=$(grep -m1 '## \[' CHANGELOG.md | sed 's/.*\[\([^]]*\)\].*/\1/')
+          CHANGELOG_VERSION=$(grep '## \[' CHANGELOG.md | grep -v 'Unreleased' | head -1 | sed 's/.*\[\([^]]*\)\].*/\1/')
 
           echo "plugin.json:  $PLUGIN_VERSION"
           echo "package.json: $PACKAGE_VERSION"
@@ -101,10 +101,12 @@ jobs:
           echo "Validating plugin.json..."
           jq empty .claude-plugin/plugin.json
 
+          echo "Validating hooks.json..."
+          jq empty .claude-plugin/hooks.json
+
           echo "Validating package.json..."
           jq empty hooks/package.json
 
-          echo "Validating tsconfig.json..."
-          jq empty hooks/tsconfig.json
+          # Note: tsconfig.json is JSONC (has comments), validated by tsc instead
 
           echo "✓ All JSON files are valid"
