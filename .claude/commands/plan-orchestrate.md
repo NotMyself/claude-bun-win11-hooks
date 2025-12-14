@@ -114,22 +114,24 @@ Resolves to:
 - Content from `code/css.md` section "## Layout" or "### Layout"
 ```
 
-### 5. Execute Features in Parallel Batches
+### 5. Execute Features Sequentially
 
-For each batch of ready features (see Step 6 for parallelization logic):
+Execute features one at a time in dependency order:
 
 1. **Check Dependencies**: Ensure all `depends_on` features are `completed`
 
-2. **Update Status**: Mark feature as `in_progress` in `manifest.jsonl`
+2. **CRITICAL - Verify Dependencies Actually Complete**: Before proceeding, RUN the verification command for each dependency to confirm it actually completed. Do NOT trust manifest status alone.
 
-3. **Read Prompt**: Load the corresponding prompt file
+3. **Update Status**: Mark feature as `in_progress` in `manifest.jsonl`
 
-4. **Resolve Feature Context**: Gather all context for this feature:
+4. **Read Prompt**: Load the corresponding prompt file
+
+5. **Resolve Feature Context**: Gather all context for this feature:
    - **Code patterns**: Resolve each `code_refs` entry (see Step 4.5)
    - **Edge cases**: Look up each `edge_cases` ID in `edge-cases.md` to get full descriptions
    - **Decisions**: Look up each `decisions` ID in `decisions.md` to get rationale
 
-5. **Spawn Sub-Agent**: Use the Task tool with `subagent_type: "general-purpose"` to:
+6. **Spawn Sub-Agent**: Use the Task tool with `subagent_type: "general-purpose"` to:
 
    - Execute the feature implementation using TDD workflow
    - The prompt should include:
@@ -221,49 +223,38 @@ For each batch of ready features (see Step 6 for parallelization logic):
    After build and tests pass, commit with these decision IDs: D001, D002
    ```
 
-6. **Verify Completion**: After sub-agent completes:
+7. **CRITICAL - Verify Completion Before Marking Complete**: After sub-agent completes:
+
+   **WARNING: Do NOT mark as completed unless ALL verification passes. Do NOT trust sub-agent claims alone.**
 
    - **Verify TDD workflow followed**: Confirm tests were written before implementation
    - **Verify linting passed**: Confirm all modified files pass linting with no errors
    - **Verify formatting applied**: Confirm all modified files are properly formatted
-   - **Verify build passes**: Confirm sub-agent ran build and it succeeded
-   - **Verify all tests pass**: Confirm sub-agent ran tests and all passed
+   - **Verify build passes**: Run the build command yourself and confirm it succeeded
+   - **Verify all tests pass**: Run the test suite yourself and confirm all passed
    - **Verify test coverage**: Confirm new functionality has corresponding tests
-   - Check that feature-specific verification command passes
-   - Check that git commit was made
+   - **RUN the feature-specific verification command yourself** - Do NOT skip this step
+   - **Verify git commit was made**: Check git log for the expected commit
    - **Verify commit message includes relevant decision IDs** from the manifest `decisions` array
-   - Update `manifest.jsonl` status to `completed`
+   - **Only if ALL above checks pass**: Update `manifest.jsonl` status to `completed`
+   - **If ANY check fails**: Do NOT mark as completed. Mark as `failed` and handle below.
 
-7. **Handle Failures**: If a feature fails:
+8. **Handle Failures**: If a feature fails:
    - Mark status as `failed` in `manifest.jsonl`
    - Log the failure reason
    - Ask user whether to retry, skip, or abort
+   - Do NOT proceed to next feature until user responds
 
-### 6. Parallelization
+### 6. Resume Safeguards
 
-Features with satisfied dependencies and no inter-dependencies MUST run in parallel:
+When resuming an interrupted plan (branch already exists):
 
-1. **Identify parallelizable features**: After each completion cycle, find all `pending` features where:
-   - All `depends_on` features are `completed`
-   - Features do not depend on each other (no circular or sequential dependency)
+1. **Re-verify ALL "completed" features**: Run the verification command for each feature marked as "completed"
+2. **If any verification fails**: Reset that feature's status to `pending`
+3. **Log which features were reset**: Inform user which features need to be re-done
+4. **Continue from first pending feature**: Do not skip features based solely on manifest status
 
-2. **Spawn parallel sub-agents**: Use multiple Task tool calls in a single message to:
-   - Execute all ready features simultaneously
-   - Each sub-agent receives the same enriched prompt structure (code refs, edge cases, decisions)
-
-3. **Wait for completion**: All parallel sub-agents must complete before:
-   - Updating `manifest.jsonl` with their statuses
-   - Checking for newly unblocked features
-
-4. **Repeat**: After each parallel batch completes, identify the next set of parallelizable features
-
-Example parallel execution:
-```
-Layer 1: F000 (init) - runs alone
-Layer 2: F001, F002, F003 all depend only on F000 - run in parallel
-Layer 3: F004 depends on F001, F005 depends on F002 - run in parallel
-Layer 4: F006 depends on F004 and F005 - runs alone
-```
+**CRITICAL: Never trust manifest status on resume. Always verify actual state.**
 
 ### 7. Final Validation
 
@@ -323,18 +314,29 @@ After validation, analyze project documentation and suggest updates based on new
      - Updated README.md with [summary]
      ```
 
-### 9. Merge Feature Branch
+### 9. Create Pull Request (NEVER Merge to Main)
 
-After all features are complete and validated, merge the plan branch:
+**CRITICAL: NEVER merge to main. NEVER push to main. Create a PR instead.**
 
-1. **Switch to main branch**: `git checkout main`
-2. **Merge plan branch**: `git merge plan/<plan-name>`
-3. **Delete plan branch** (optional): `git branch -d plan/<plan-name>`
+After all features are complete and validated:
 
-If merge conflicts occur:
-- Pause and notify the user
-- Provide conflict details
-- Wait for user to resolve conflicts before continuing
+1. **Push feature branch**: `git push -u origin plan/<plan-name>`
+2. **Create pull request**: Use `gh pr create` to create a PR from the plan branch to main
+3. **Include in PR description**:
+   - Summary of features implemented
+   - Link to the plan directory
+   - Any notes for reviewers
+4. **Return PR URL to user**: Let user review and merge manually
+
+```bash
+# Push feature branch (OK to push to feature branch)
+git push -u origin plan/<plan-name>
+
+# Create PR (NEVER merge directly)
+gh pr create --title "feat: <plan-name>" --body "..."
+```
+
+**WARNING**: Do NOT run `git checkout main`, `git merge`, or `git push origin main`. All code stays on the feature branch until user manually merges the PR.
 
 ### 10. Relocate Completed Plan
 
@@ -386,7 +388,7 @@ After execution completes, provide:
 11. Screenshots from E2E validation (if Playwright available)
 12. Validation results compared against `README.md` acceptance criteria
 13. **Documentation updates**: Summary of changes made to CLAUDE.md and README.md
-14. Confirmation that `plan/<plan-name>` branch was merged to main
+14. **Pull request URL**: Link to the PR created for user to review and merge
 15. Confirmation that plan was relocated to `dev/complete/`
 
 ## Example Usage
@@ -398,26 +400,27 @@ After execution completes, provide:
 This will:
 
 1. **Create branch** `plan/ui-updates` (or switch to it if resuming)
-2. Read `dev/active/ui-updates/manifest.jsonl` with all field data
-3. Load context from `context.md`, `decisions.md`, `edge-cases.md`, `testing-strategy.md`, `README.md`
-4. List available code patterns in `code/` directory
-5. Discover available MCP tools
-6. Run `init.md` verification (F000)
-7. **Execute features in parallel batches**:
-   - Identify all features with satisfied dependencies
-   - Resolve `code_refs`, edge cases, and decisions for each
-   - Spawn multiple sub-agents simultaneously
-   - Wait for batch to complete, verify commits
-   - Repeat with newly unblocked features
-8. Track progress in `manifest.jsonl`
-9. Run final E2E validation against `README.md` criteria
-10. **Suggest documentation updates**:
+2. **If resuming**: Re-verify all "completed" features, reset any that fail verification
+3. Read `dev/active/ui-updates/manifest.jsonl` with all field data
+4. Load context from `context.md`, `decisions.md`, `edge-cases.md`, `testing-strategy.md`, `README.md`
+5. List available code patterns in `code/` directory
+6. Discover available MCP tools
+7. Run `init.md` verification (F000)
+8. **Execute features sequentially**:
+   - For each pending feature in dependency order
+   - Verify dependencies actually completed (run verification commands)
+   - Spawn sub-agent for the feature
+   - Verify all checks pass before marking complete
+   - Continue to next feature
+9. Track progress in `manifest.jsonl`
+10. Run final E2E validation against `README.md` criteria
+11. **Suggest documentation updates**:
     - Analyze CLAUDE.md and README.md in project root
     - Generate suggestions based on implemented features
     - Present diff-style suggestions for user approval
     - Apply approved updates and commit
-11. **Merge** `plan/ui-updates` branch into main
-12. Move `dev/active/ui-updates` to `dev/complete/ui-updates` and commit
+12. **Push branch and create PR** (NEVER merge to main)
+13. Move `dev/active/ui-updates` to `dev/complete/ui-updates` and commit
 
 ## Error Handling
 
@@ -428,18 +431,19 @@ This will:
 - **Format failure**: Sub-agent must apply formatting to all modified files before committing
 - **Build failure**: Sub-agent must fix before committing; if unable, mark as failed
 - **Test failure**: Sub-agent must fix before committing; if unable, mark as failed
-- **Verification failure**: Do not proceed to commit, mark as failed
+- **Verification failure**: Do NOT mark as completed, mark as `failed` and ask user how to proceed
+- **Dependency verification failure**: Reset dependency to `pending`, re-run it before continuing
 - **Git conflict**: Pause and ask user for resolution
 - **Missing files**: Abort with clear error message
-- **Dependency not met**: Skip feature, continue with others that are ready
+- **Dependency not met**: Wait for dependency to complete (sequential execution)
 - **Missing code_refs**: Warn but continue (code patterns are helpful but not blocking)
 - **Decision IDs missing from commit**: Warn user, optionally amend commit
 - **MCP tool unavailable**: Continue without that tool, note in output
 - **Missing linter/formatter**: Use available tools; warn if project-specific config not found
 - **Missing CLAUDE.md or README.md**: Skip documentation suggestions for missing files
 - **Documentation update rejected**: Continue without updating; note in output
-- **Branch already exists**: Switch to existing branch (resuming interrupted plan)
-- **Merge conflict**: Pause and notify user; wait for resolution before continuing
+- **Branch already exists**: Switch to existing branch, re-verify all "completed" features
+- **PR creation failure**: Retry once, then ask user for help
 
 ## Progress Tracking
 
@@ -458,57 +462,78 @@ cat manifest.jsonl | jq -r '.status' | sort | uniq -c
 1. **Create or switch to plan branch**:
    - Extract plan name from `$ARGUMENTS` (e.g., `ui-updates` from `dev/active/ui-updates`)
    - Create branch `plan/<plan-name>` or switch to it if it exists
-2. Read `$ARGUMENTS/manifest.jsonl` to get the feature list and all field data
-3. Read context files:
+
+2. **If resuming (branch exists)**: Re-verify all "completed" features
+   - For each feature with status "completed", run its verification command
+   - If verification fails, reset status to "pending"
+   - Log which features were reset
+
+3. Read `$ARGUMENTS/manifest.jsonl` to get the feature list and all field data
+
+4. Read context files:
    - `$ARGUMENTS/context.md` for project context
    - `$ARGUMENTS/constraints.md` for global rules
    - `$ARGUMENTS/decisions.md` for architectural decisions
    - `$ARGUMENTS/edge-cases.md` for edge case definitions
    - `$ARGUMENTS/testing-strategy.md` for testing approach
    - `$ARGUMENTS/README.md` for orchestration guidance
-3. List files in `$ARGUMENTS/code/` directory to know available code patterns
-4. Discover available MCP tools (Playwright, Context7, Documentation, Sequential Thinking)
-5. **Identify all ready features**: Find all `pending` features where `depends_on` are all `completed`
-6. **For each ready feature in the batch**, prepare its enriched context:
-   - Read its prompt file
-   - Resolve `code_refs` by reading sections from `code/*.md` files
-   - Look up `edge_cases` IDs in `edge-cases.md`
-   - Look up `decisions` IDs in `decisions.md`
-7. **Spawn sub-agents in parallel**: Use multiple Task tool calls in a single message, each providing:
-   - Full prompt content
-   - Resolved code snippets
-   - Edge case details
-   - Decision details
-   - Available MCP tools
-   - **TDD workflow requirements**: Red-Green-Refactor cycle mandatory
-   - **Pre-commit requirements**: Lint, format, build, and all tests must pass
-   - Commit requirements (include decision IDs)
-8. **Wait for all parallel sub-agents to complete**
-9. For each completed sub-agent:
-   - Verify TDD workflow was followed (tests written before implementation)
-   - Verify test coverage for new functionality
-   - Verify linting passed on all modified files
-   - Verify formatting applied to all modified files
-   - Verify build passed
-   - Verify all tests passed
-   - Verify the feature-specific verification command passes
-   - Verify commit was made with decision IDs
-   - Update `manifest.jsonl` status
-10. **Repeat from step 5**: Identify newly unblocked features and spawn next parallel batch
-11. Continue until all features are complete or a failure occurs
-12. Run final validation using `README.md` guidance and E2E prompt
-13. **Suggest documentation updates**:
+
+5. List files in `$ARGUMENTS/code/` directory to know available code patterns
+
+6. Discover available MCP tools (Playwright, Context7, Documentation, Sequential Thinking)
+
+7. **Execute features SEQUENTIALLY** (one at a time, in dependency order):
+
+   For each pending feature:
+
+   a. **Verify dependencies actually complete**: Run verification command for each dependency
+   b. If any dependency fails verification, reset it to pending and process it first
+   c. Prepare enriched context:
+      - Read its prompt file
+      - Resolve `code_refs` by reading sections from `code/*.md` files
+      - Look up `edge_cases` IDs in `edge-cases.md`
+      - Look up `decisions` IDs in `decisions.md`
+   d. **Spawn ONE sub-agent** with:
+      - Full prompt content
+      - Resolved code snippets
+      - Edge case details
+      - Decision details
+      - Available MCP tools
+      - **TDD workflow requirements**: Red-Green-Refactor cycle mandatory
+      - **Pre-commit requirements**: Lint, format, build, and all tests must pass
+      - Commit requirements (include decision IDs)
+   e. **Wait for sub-agent to complete**
+   f. **VERIFY COMPLETION YOURSELF** (do NOT trust sub-agent claims):
+      - Run build command and confirm success
+      - Run test suite and confirm all pass
+      - Run the feature-specific verification command
+      - Check git log for expected commit with decision IDs
+   g. **Only if ALL verification passes**: Mark as `completed`
+   h. **If ANY verification fails**: Mark as `failed`, ask user how to proceed
+   i. Continue to next feature
+
+8. Run final validation using `README.md` guidance and E2E prompt
+
+9. **Suggest documentation updates**:
     - Read `CLAUDE.md` and `README.md` from project root (if they exist)
     - Analyze all completed features from manifest
     - Generate suggested updates for each documentation file
     - Present diff-style suggestions to user
     - Ask user to approve, modify, or skip each suggestion
     - Apply approved updates and commit separately
-14. **Merge feature branch**:
-    - Switch to main branch
-    - Merge `plan/<plan-name>` branch
-    - Handle any merge conflicts (pause for user if needed)
-    - Optionally delete the plan branch
-15. When all features are complete and validated, relocate the plan directory to `dev/complete/` and commit
+
+10. **Push branch and create PR (NEVER merge to main)**:
+    - `git push -u origin plan/<plan-name>`
+    - `gh pr create --title "feat: <plan-name>" --body "..."`
+    - Return PR URL to user
+
+11. Relocate the plan directory to `dev/complete/` and commit
+
+**CRITICAL REMINDERS:**
+- Execute features ONE AT A TIME (no parallel execution)
+- VERIFY completion yourself (do not trust manifest or sub-agent claims)
+- NEVER merge to main
+- NEVER push to main
+- Always create a PR for user review
 
 Begin orchestration now.
