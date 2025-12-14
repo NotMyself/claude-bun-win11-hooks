@@ -23,12 +23,13 @@ const MIME_TYPES: Record<string, string> = {
 
 /**
  * Content Security Policy for HTML responses.
- * Restricts script sources to prevent XSS.
+ * Restricts script sources to prevent XSS while allowing necessary external resources.
  */
 const CSP_HEADER = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",  // Vue.js needs inline
-  "style-src 'self' 'unsafe-inline'",   // Vue.js needs inline
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com",  // Vue.js runtime compiler needs eval
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",  // Google Fonts CSS
+  "font-src 'self' https://fonts.gstatic.com",  // Google Fonts files
   "img-src 'self' data:",
   "connect-src 'self'",
   "frame-ancestors 'none'",
