@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial plugin release
 - All 12 hook handlers with JSONL logging
 - Realtime log viewer UI (Vue.js)
-- 6 rules files for Claude Code guidance
+- 9 rules files for Claude Code guidance
 - 3 slash commands
 - Build system for bundling TypeScript to JavaScript
 - GitHub Actions CI/CD workflows

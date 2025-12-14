@@ -180,8 +180,8 @@ export class SessionSummaryService {
   /**
    * Check if a cached entry is still valid based on file metadata
    */
-  private isCacheValid(filePath: string, stat: ReturnType<typeof statSync>): boolean {
-    if (!this.cache) return false;
+  private isCacheValid(filePath: string, stat: ReturnType<typeof statSync> | undefined): boolean {
+    if (!this.cache || !stat) return false;
 
     const cached = this.cache.sessions[filePath];
     if (!cached) return false;
@@ -260,7 +260,9 @@ export class SessionSummaryService {
           // Check if we have a valid cached entry
           if (this.isCacheValid(filePath, stat)) {
             const cached = this.cache!.sessions[filePath];
-            summaries.push(cached.summary);
+            if (cached) {
+              summaries.push(cached.summary);
+            }
             continue;
           }
 
@@ -297,8 +299,9 @@ export class SessionSummaryService {
   private async parseSessionFile(
     filePath: string,
     projectName: string,
-    stat: ReturnType<typeof statSync>
+    stat: ReturnType<typeof statSync> | undefined
   ): Promise<ClaudeSessionSummary | null> {
+    if (!stat) return null;
     try {
       const content = readFileSync(filePath, "utf-8");
       const lines = content.trim().split("\n").filter(Boolean);
@@ -371,8 +374,8 @@ export class SessionSummaryService {
         turn_count: turnCount,
         last_activity: lastActivity || new Date().toISOString(),
         first_activity: firstActivity || new Date().toISOString(),
-        total_tokens: totalTokens,
-        file_size: stat.size,
+        total_tokens: Number(totalTokens),
+        file_size: Number(stat.size),
       };
     } catch (err) {
       console.debug(`[SessionSummaryService] Error parsing ${filePath}:`, err);

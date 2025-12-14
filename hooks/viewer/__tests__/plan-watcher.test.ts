@@ -97,12 +97,12 @@ describe("PlanWatcher", () => {
       const plans = watcher.getAllPlans(false);
 
       expect(plans).toHaveLength(1);
-      expect(plans[0].name).toBe("test-plan");
-      expect(plans[0].status).toBe("active");
-      expect(plans[0].featureCount).toBe(4);
-      expect(plans[0].completedCount).toBe(1);
-      expect(plans[0].inProgressCount).toBe(1);
-      expect(plans[0].failedCount).toBe(1);
+      expect(plans[0]?.name).toBe("test-plan");
+      expect(plans[0]?.status).toBe("active");
+      expect(plans[0]?.featureCount).toBe(4);
+      expect(plans[0]?.completedCount).toBe(1);
+      expect(plans[0]?.inProgressCount).toBe(1);
+      expect(plans[0]?.failedCount).toBe(1);
     });
 
     it("includes completed plans when requested", () => {
@@ -161,10 +161,10 @@ describe("PlanWatcher", () => {
 
       const plans = watcher.getAllPlans(false);
 
-      expect(plans[0].completedCount).toBe(1);
-      expect(plans[0].inProgressCount).toBe(1);
-      expect(plans[0].failedCount).toBe(1);
-      expect(plans[0].featureCount).toBe(4);
+      expect(plans[0]?.completedCount).toBe(1);
+      expect(plans[0]?.inProgressCount).toBe(1);
+      expect(plans[0]?.failedCount).toBe(1);
+      expect(plans[0]?.featureCount).toBe(4);
     });
 
     it("skips non-directory entries", () => {
@@ -326,7 +326,7 @@ describe("PlanWatcher", () => {
 
       const plans = watcher.getAllPlans(false);
 
-      expect(plans[0].status).toBe("active");
+      expect(plans[0]?.status).toBe("active");
     });
 
     it("plan in dev/complete has status 'completed'", () => {
