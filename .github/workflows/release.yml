@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  packages: write
 
 jobs:
   build:
@@ -60,3 +61,34 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js for npm publish
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@notmyself'
+
+      - name: Publish to GitHub Packages
+        run: |
+          cd release/claude-hall-monitor
+          cat > package.json << EOF
+          {
+            "name": "@notmyself/claude-hall-monitor",
+            "version": "${{ steps.version.outputs.VERSION }}",
+            "description": "Claude Code plugin with 12 hook handlers, realtime log viewer, rules, and slash commands",
+            "repository": {
+              "type": "git",
+              "url": "git+https://github.com/NotMyself/claude-hall-monitor.git"
+            },
+            "keywords": ["claude-code", "hooks", "plugin", "logging", "monitoring"],
+            "author": "NotMyself",
+            "license": "MIT",
+            "publishConfig": {
+              "registry": "https://npm.pkg.github.com"
+            }
+          }
+          EOF
+          npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

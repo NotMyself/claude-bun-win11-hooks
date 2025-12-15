@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Repository renamed from `claude-bun-win11-hooks` to `claude-hall-monitor`
+- Release workflow publishes to GitHub Packages
 
 ### Fixed
 - Updated all repository URLs to new location
