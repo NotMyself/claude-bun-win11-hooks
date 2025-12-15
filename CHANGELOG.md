@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2025-12-15
+
+### Changed
+- Repository renamed from `claude-bun-win11-hooks` to `claude-hall-monitor`
+- Release workflow now publishes to GitHub Packages (npm)
+
+### Fixed
+- Updated all repository URLs to new location
+
 ## [1.0.0] - 2024-12-14
 
 ### Added
@@ -22,5 +31,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Project structure from .claude/ to root level for plugin distribution
 
-[Unreleased]: https://github.com/NotMyself/claude-hall-monitor/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/NotMyself/claude-hall-monitor/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/NotMyself/claude-hall-monitor/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/NotMyself/claude-hall-monitor/releases/tag/v1.0.0

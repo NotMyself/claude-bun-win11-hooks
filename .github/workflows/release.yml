@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  packages: write
 
 jobs:
   build:
@@ -47,6 +48,7 @@ jobs:
           cp -r commands release/claude-hall-monitor/
           cp README.md release/claude-hall-monitor/
           cp CHANGELOG.md release/claude-hall-monitor/
+          cp LICENSE release/claude-hall-monitor/ 2>/dev/null || true
           cd release
           zip -r claude-hall-monitor-${{ steps.version.outputs.VERSION }}.zip claude-hall-monitor
 
@@ -59,6 +61,58 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js for npm publish
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@notmyself'
+
+      - name: Prepare npm package
+        run: |
+          mkdir -p npm-package
+          cp -r .claude-plugin npm-package/
+          cp -r dist npm-package/
+          cp -r rules npm-package/
+          cp -r commands npm-package/
+          cp README.md npm-package/
+          cp CHANGELOG.md npm-package/
+          cp LICENSE npm-package/ 2>/dev/null || true
+
+          # Create package.json for npm
+          cat > npm-package/package.json << 'PKGJSON'
+          {
+            "name": "@notmyself/claude-hall-monitor",
+            "version": "${{ steps.version.outputs.VERSION }}",
+            "description": "Claude Code plugin with 12 hook handlers, realtime log viewer, rules, and slash commands",
+            "main": "dist/handlers/session-start.js",
+            "repository": {
+              "type": "git",
+              "url": "git+https://github.com/NotMyself/claude-hall-monitor.git"
+            },
+            "keywords": ["claude-code", "hooks", "plugin", "logging", "monitoring"],
+            "author": "NotMyself",
+            "license": "MIT",
+            "bugs": {
+              "url": "https://github.com/NotMyself/claude-hall-monitor/issues"
+            },
+            "homepage": "https://github.com/NotMyself/claude-hall-monitor#readme",
+            "publishConfig": {
+              "registry": "https://npm.pkg.github.com"
+            }
+          }
+          PKGJSON
+
+          # Replace version placeholder
+          sed -i 's/\${{ steps.version.outputs.VERSION }}/${{ steps.version.outputs.VERSION }}/g' npm-package/package.json
+
+      - name: Publish to GitHub Packages
+        run: |
+          cd npm-package
+          npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   cross-platform-test:
     needs: build

@@ -1,7 +1,7 @@
 {
   "name": "claude-hall-monitor",
   "description": "All 12 hook handlers with JSONL logging, realtime viewer UI, rules, and slash commands",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "NotMyself",
   "repository": "https://github.com/NotMyself/claude-hall-monitor",
   "homepage": "https://github.com/NotMyself/claude-hall-monitor#readme",
