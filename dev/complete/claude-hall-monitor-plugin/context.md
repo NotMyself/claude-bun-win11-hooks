@@ -2,55 +2,58 @@
 
 ## Summary
 
-Transform the claude-bun-win11-hooks project into an installable Claude Code plugin named "claude-hall-monitor". This plugin provides comprehensive hook monitoring capabilities through:
+Transform the `claude-bun-win11-hooks` project into an installable Claude Code plugin named **claude-hall-monitor**. This plugin packages all 12 hook handlers, the Hall Monitor realtime viewer UI, 6 rules files, and 3 slash commands into a distributable package that can be installed via the claude-dotnet-marketplace.
 
-- **12 Hook Handlers**: Full coverage of all Claude Code hook events (UserPromptSubmit, PreToolUse, PostToolUse, PostToolUseFailure, Notification, SessionStart, SessionEnd, Stop, SubagentStart, SubagentStop, PreCompact, PermissionRequest)
-- **Hall Monitor Viewer**: Realtime web UI for monitoring hook activity via SSE streaming
-- **6 Rules Files**: Actionable conventions auto-loaded by Claude Code
-- **3 Slash Commands**: Custom commands for planning and orchestration
+### Why This Matters
 
-The goal is to create a distributable package that can be installed via the claude-dotnet-marketplace, enabling any Claude Code user to add comprehensive hook monitoring to their projects.
+The current implementation works well as a development project but requires manual setup. Converting it to a plugin enables:
+
+1. **One-command installation** - Users install with a single marketplace command
+2. **Zero-config setup** - Plugin system handles hook registration automatically
+3. **Cross-platform distribution** - Same package works on Windows, macOS, Linux
+4. **Version management** - Semantic versioning enables controlled updates
+5. **Community sharing** - Marketplace listing makes it discoverable
 
 ## Architecture Vision
-
-### Plugin Structure
-
-The plugin follows the claude-dotnet-marketplace plugin format:
 
 ```
 claude-hall-monitor/
 ├── .claude-plugin/
-│   ├── plugin.json      # Plugin metadata and configuration
-│   └── hooks.json       # Hook configurations with ${CLAUDE_PLUGIN_ROOT}
+│   ├── plugin.json          # Plugin metadata (name, version, description)
+│   └── hooks.json           # Hook configurations using ${CLAUDE_PLUGIN_ROOT}
 ├── dist/
-│   ├── handlers/        # Bundled JS hook handlers (12 files)
-│   └── viewer/          # Bundled viewer server
-├── hooks/
-│   ├── handlers/        # TypeScript source (development)
-│   ├── utils/           # Shared utilities
-│   └── viewer/          # Viewer source
-├── rules/               # Auto-loaded rule files
-├── commands/            # Slash command definitions
-├── build.ts             # Bun build script
-└── CHANGELOG.md         # Version history
+│   ├── handlers/            # Bundled JS files (12 handlers)
+│   │   ├── session-start.js
+│   │   ├── session-end.js
+│   │   └── ... (10 more)
+│   └── viewer/
+│       └── server.js        # Bundled viewer server
+├── hooks/                   # Source TypeScript (moved from .claude/hooks/)
+│   ├── handlers/
+│   ├── utils/
+│   ├── viewer/
+│   ├── package.json
+│   └── tsconfig.json
+├── rules/                   # Rule files (moved from .claude/rules/)
+├── commands/                # Slash commands (moved from .claude/commands/)
+├── build.ts                 # Bun build script
+├── CHANGELOG.md             # Version history
+└── .github/workflows/       # CI/CD pipelines
 ```
 
-### Key Design Principles
+### Key Architectural Decisions
 
-1. **Zero Installation Friction**: Bundle all dependencies into standalone JS files so users only need Bun runtime (no `bun install` required)
+1. **Bundled JavaScript Distribution**: TypeScript source is compiled to standalone JavaScript bundles with all dependencies inlined. Users only need Bun runtime installed - no `bun install` required.
 
-2. **Cross-Platform Compatibility**: All handlers and viewer work on Windows, macOS, and Linux through careful path handling
+2. **Plugin Variable Paths**: Hook commands use `${CLAUDE_PLUGIN_ROOT}` which expands at runtime to the plugin's installation location.
 
-3. **Runtime Path Resolution**: Use `${CLAUDE_PLUGIN_ROOT}` variable in hooks.json, expanded by Claude Code at runtime to the actual installation path
-
-4. **Semantic Versioning**: Start at 1.0.0, maintain version consistency across plugin.json, package.json, and CHANGELOG.md
-
-5. **CI/CD Automation**: GitHub Actions workflows for PR validation and release packaging
+3. **Dual-Purpose Repository**: The repo serves as both development environment (TypeScript source) and distribution package (built bundles).
 
 ## Goals
 
-- Create a clean, distributable plugin package
-- Maintain all existing functionality from the development repo
-- Enable one-command installation via marketplace
-- Provide comprehensive documentation for users
-- Establish automated testing and release pipeline
+- Package existing hooks implementation as installable plugin
+- Maintain cross-platform compatibility (Windows, macOS, Linux)
+- Enable zero-dependency installation (only Bun runtime required)
+- Integrate with existing claude-dotnet-marketplace
+- Establish semantic versioning for future updates
+- Automate builds and releases via GitHub Actions

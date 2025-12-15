@@ -1,30 +1,31 @@
-# YAML Patterns
+# YAML Patterns (GitHub Actions)
 
-## GitHub Actions Workflows
+## CI Workflow
 
-### CI Workflow
-
-Pull request validation workflow:
+### ci.yml - Pull Request Testing
 
 ```yaml
 name: CI
 
 on:
-  push:
-    branches: [main]
   pull_request:
+    branches: [main]
+  push:
     branches: [main]
 
 jobs:
-  build-and-test:
-    runs-on: ubuntu-latest
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
+        uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
@@ -36,27 +37,24 @@ jobs:
       - name: Type check
         run: |
           cd hooks
-          bun run tsc
+          bun run tsc --noEmit
 
-      - name: Unit tests
+      - name: Run tests
         run: |
           cd hooks
           bun run test:run
 
-      - name: Build
+      - name: Build bundles
         run: bun run build.ts
 
-      - name: Verify build output
+      - name: Verify bundles exist
         run: |
           ls -la dist/handlers/
           ls -la dist/viewer/
-
-      - name: E2E tests
-        run: bun run test-e2e.ts
+        shell: bash
 
   version-check:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -65,20 +63,28 @@ jobs:
         run: |
           PLUGIN_VERSION=$(jq -r '.version' .claude-plugin/plugin.json)
           PACKAGE_VERSION=$(jq -r '.version' hooks/package.json)
+          CHANGELOG_VERSION=$(grep -m1 '## \[' CHANGELOG.md | sed 's/.*\[\([^]]*\)\].*/\1/')
+
+          echo "plugin.json:  $PLUGIN_VERSION"
+          echo "package.json: $PACKAGE_VERSION"
+          echo "CHANGELOG.md: $CHANGELOG_VERSION"
 
           if [ "$PLUGIN_VERSION" != "$PACKAGE_VERSION" ]; then
-            echo "Version mismatch!"
-            echo "plugin.json: $PLUGIN_VERSION"
-            echo "package.json: $PACKAGE_VERSION"
+            echo "❌ Version mismatch between plugin.json and package.json"
             exit 1
           fi
 
-          echo "Versions match: $PLUGIN_VERSION"
+          if [ "$PLUGIN_VERSION" != "$CHANGELOG_VERSION" ]; then
+            echo "❌ Version mismatch between plugin.json and CHANGELOG.md"
+            exit 1
+          fi
+
+          echo "✓ All versions match: $PLUGIN_VERSION"
 ```
 
-### Release Workflow
+## Release Workflow
 
-Tag-triggered release workflow:
+### release.yml - Tag-Based Releases
 
 ```yaml
 name: Release
@@ -92,7 +98,7 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -100,7 +106,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
+        uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
@@ -109,68 +115,45 @@ jobs:
           cd hooks
           bun install
 
-      - name: Type check
-        run: |
-          cd hooks
-          bun run tsc
-
-      - name: Unit tests
+      - name: Run tests
         run: |
           cd hooks
           bun run test:run
 
-      - name: Build
+      - name: Build bundles
         run: bun run build.ts
 
-      - name: E2E tests
-        run: bun run test-e2e.ts
-
-      - name: Get version from tag
+      - name: Extract version from tag
         id: version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
       - name: Create release archive
         run: |
-          mkdir -p release
-          cp -r .claude-plugin release/
-          cp -r dist release/
-          cp -r hooks release/
-          cp -r rules release/
-          cp -r commands release/
-          cp CHANGELOG.md release/
-          cp README.md release/
+          mkdir -p release/claude-hall-monitor
+          cp -r .claude-plugin release/claude-hall-monitor/
+          cp -r dist release/claude-hall-monitor/
+          cp -r rules release/claude-hall-monitor/
+          cp -r commands release/claude-hall-monitor/
+          cp README.md release/claude-hall-monitor/
+          cp CHANGELOG.md release/claude-hall-monitor/
           cd release
-          zip -r ../claude-hall-monitor-${{ steps.version.outputs.VERSION }}.zip .
+          zip -r claude-hall-monitor-${{ steps.version.outputs.VERSION }}.zip claude-hall-monitor
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          files: claude-hall-monitor-${{ steps.version.outputs.VERSION }}.zip
+          files: release/claude-hall-monitor-${{ steps.version.outputs.VERSION }}.zip
           generate_release_notes: true
-          body: |
-            ## Claude Hall Monitor v${{ steps.version.outputs.VERSION }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-            See [CHANGELOG.md](CHANGELOG.md) for details.
-
-            ### Installation
-
-            Download the zip file and extract to your plugins directory, or install via:
-            ```bash
-            claude plugins install NotMyself/claude-hall-monitor
-            ```
-```
-
-### Matrix Build (Optional)
-
-Cross-platform testing:
-
-```yaml
-jobs:
-  test:
+  cross-platform-test:
+    needs: build
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -178,7 +161,39 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Build and test
+        run: |
+          cd hooks
+          bun install
+          bun run test:run
+
+      - name: Build bundles
+        run: bun run build.ts
+
+      - name: Test handler execution
+        run: |
+          echo '{"session_id":"test"}' | bun run dist/handlers/session-start.js
+        shell: bash
+```
+
+## Workflow Patterns
+
+### Reusable Job for Testing
+
+```yaml
+# Can be extracted to .github/workflows/test.yml and called with workflow_call
+
+jobs:
+  test:
+    runs-on: ${{ inputs.os || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
@@ -186,33 +201,37 @@ jobs:
         run: |
           cd hooks
           bun install
+          bun run tsc --noEmit
           bun run test:run
-```
-
-## Workflow Patterns
-
-### Conditional Steps
-
-Run steps only on certain conditions:
-
-```yaml
-- name: Upload coverage
-  if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-  uses: codecov/codecov-action@v3
-  with:
-    files: hooks/coverage/lcov.info
 ```
 
 ### Caching Dependencies
 
-Speed up builds with caching:
-
 ```yaml
 - name: Cache Bun dependencies
-  uses: actions/cache@v3
+  uses: actions/cache@v4
   with:
-    path: ~/.bun/install/cache
+    path: |
+      ~/.bun/install/cache
+      hooks/node_modules
     key: ${{ runner.os }}-bun-${{ hashFiles('hooks/bun.lockb') }}
     restore-keys: |
       ${{ runner.os }}-bun-
+```
+
+### Matrix Strategy for All Platforms
+
+```yaml
+strategy:
+  fail-fast: false  # Continue testing other platforms if one fails
+  matrix:
+    os: [ubuntu-latest, windows-latest, macos-latest]
+    bun-version: [latest]
+    include:
+      - os: ubuntu-latest
+        shell: bash
+      - os: windows-latest
+        shell: pwsh
+      - os: macos-latest
+        shell: bash
 ```

@@ -1,241 +1,282 @@
 # TypeScript Patterns
 
-## Build System
+## Types
+
+### Plugin Manifest Types
+
+```typescript
+// .claude-plugin/plugin.json schema
+interface PluginManifest {
+  name: string;           // Plugin identifier (e.g., "claude-hall-monitor")
+  version: string;        // Semantic version (e.g., "1.0.0")
+  description: string;    // Human-readable description
+  author?: string;        // Plugin author
+  repository?: string;    // GitHub URL
+  runtime: "bun" | "node"; // Required runtime
+}
+```
+
+### Hook Configuration Types
+
+```typescript
+// .claude-plugin/hooks.json schema
+interface HooksConfig {
+  hooks: HookDefinition[];
+}
+
+interface HookDefinition {
+  matcher: HookMatcher;
+  hooks: HookEntry[];
+}
+
+interface HookMatcher {
+  type: "always" | "tool" | "mcp";
+  tool_name?: string;
+}
+
+interface HookEntry {
+  type: HookType;
+  command: string;  // Uses ${CLAUDE_PLUGIN_ROOT} variable
+}
+
+type HookType =
+  | "UserPromptSubmit"
+  | "PreToolUse"
+  | "PostToolUse"
+  | "PostToolUseFailure"
+  | "Notification"
+  | "SessionStart"
+  | "SessionEnd"
+  | "Stop"
+  | "SubagentStart"
+  | "SubagentStop"
+  | "PreCompact"
+  | "PermissionRequest";
+```
+
+## Functions
 
 ### Build Script Core
 
-The main build script using Bun.build API:
-
 ```typescript
 import { join } from "node:path";
-import { existsSync, rmSync, readdirSync } from "node:fs";
 
-const ROOT = import.meta.dir;
-const HANDLERS_DIR = join(ROOT, "hooks", "handlers");
-const VIEWER_DIR = join(ROOT, "hooks", "viewer");
-const DIST_DIR = join(ROOT, "dist");
-
-// Clean dist directory
-if (existsSync(DIST_DIR)) {
-  rmSync(DIST_DIR, { recursive: true });
+// Build configuration
+interface BuildConfig {
+  entrypoints: string[];
+  outdir: string;
+  target: "bun" | "node";
+  minify: boolean;
 }
 
-// Build all handlers
-const handlerFiles = readdirSync(HANDLERS_DIR)
-  .filter((f) => f.endsWith(".ts"))
-  .map((f) => join(HANDLERS_DIR, f));
-
-await Bun.build({
-  entrypoints: handlerFiles,
-  outdir: join(DIST_DIR, "handlers"),
-  target: "bun",
-  minify: false,
-  sourcemap: "none",
-});
-
-// Build viewer server
-await Bun.build({
-  entrypoints: [join(VIEWER_DIR, "server.ts")],
-  outdir: join(DIST_DIR, "viewer"),
-  target: "bun",
-  minify: false,
-  sourcemap: "none",
-});
-
-console.log("Build complete!");
-```
-
-### Path Normalization
-
-Cross-platform path handling for shell commands:
-
-```typescript
-/**
- * Normalize path for shell commands on Windows.
- * Windows cmd.exe has issues with backslashes in quoted paths.
- */
+// Normalize paths for cross-platform compatibility
 function normalizePath(p: string): string {
   return p.replace(/\\/g, "/");
 }
 
-// Usage in spawn commands
-const safePath = normalizePath(join(dir, "file.ts"));
+// Get all handler entrypoints
+function getHandlerEntrypoints(handlersDir: string): string[] {
+  const handlers = [
+    "session-start.ts",
+    "session-end.ts",
+    "user-prompt-submit.ts",
+    "pre-tool-use.ts",
+    "post-tool-use.ts",
+    "post-tool-use-failure.ts",
+    "notification.ts",
+    "stop.ts",
+    "subagent-start.ts",
+    "subagent-stop.ts",
+    "pre-compact.ts",
+    "permission-request.ts",
+  ];
+  return handlers.map((h) => join(handlersDir, h));
+}
 ```
 
-## E2E Testing
-
-### Handler Execution Test
-
-Test that bundled handlers execute correctly:
+### Bundle Building
 
 ```typescript
-import { spawn } from "bun";
-import { join } from "node:path";
-import { describe, it, expect } from "vitest";
-
-const DIST_HANDLERS = join(import.meta.dir, "..", "dist", "handlers");
-
-interface HookInput {
-  session_id: string;
-  [key: string]: unknown;
-}
-
-async function executeHandler(
-  handlerName: string,
-  input: HookInput
-): Promise<unknown> {
-  const handlerPath = join(DIST_HANDLERS, `${handlerName}.js`);
-
-  const proc = spawn(["bun", "run", handlerPath], {
-    stdin: "pipe",
-    stdout: "pipe",
-    stderr: "pipe",
+// Bundle a single entrypoint with all dependencies inlined
+async function bundleHandler(
+  entrypoint: string,
+  outdir: string
+): Promise<void> {
+  const result = await Bun.build({
+    entrypoints: [entrypoint],
+    outdir,
+    target: "bun",
+    minify: true,
+    sourcemap: "none",
   });
 
-  proc.stdin.write(JSON.stringify(input));
-  proc.stdin.end();
+  if (!result.success) {
+    console.error(`Failed to bundle ${entrypoint}:`);
+    for (const log of result.logs) {
+      console.error(log);
+    }
+    throw new Error(`Bundle failed: ${entrypoint}`);
+  }
+}
 
-  const stdout = await new Response(proc.stdout).text();
-  const exitCode = await proc.exited;
+// Build all handlers
+async function buildAllHandlers(): Promise<void> {
+  const handlersDir = join(import.meta.dir, "hooks", "handlers");
+  const outdir = join(import.meta.dir, "dist", "handlers");
 
-  if (exitCode !== 0) {
-    const stderr = await new Response(proc.stderr).text();
-    throw new Error(`Handler failed: ${stderr}`);
+  const entrypoints = getHandlerEntrypoints(handlersDir);
+
+  for (const entry of entrypoints) {
+    await bundleHandler(entry, outdir);
+    const name = entry.split(/[/\\]/).pop();
+    console.log(`✓ Built ${name}`);
+  }
+}
+```
+
+### Version Sync Utility
+
+```typescript
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+
+interface VersionLocations {
+  pluginJson: string;
+  packageJson: string;
+  changelog: string;
+}
+
+function readVersion(file: string): string {
+  if (file.endsWith(".json")) {
+    const content = JSON.parse(readFileSync(file, "utf-8"));
+    return content.version;
+  }
+  // CHANGELOG.md - extract from first ## [x.x.x] header
+  const content = readFileSync(file, "utf-8");
+  const match = content.match(/## \[(\d+\.\d+\.\d+)\]/);
+  return match ? match[1] : "";
+}
+
+function validateVersionSync(locations: VersionLocations): boolean {
+  const versions = {
+    plugin: readVersion(locations.pluginJson),
+    package: readVersion(locations.packageJson),
+    changelog: readVersion(locations.changelog),
+  };
+
+  const allMatch =
+    versions.plugin === versions.package &&
+    versions.package === versions.changelog;
+
+  if (!allMatch) {
+    console.error("Version mismatch detected:");
+    console.error(`  plugin.json:  ${versions.plugin}`);
+    console.error(`  package.json: ${versions.package}`);
+    console.error(`  CHANGELOG.md: ${versions.changelog}`);
   }
 
-  return JSON.parse(stdout);
+  return allMatch;
+}
+```
+
+## Configuration
+
+### Bun Build Options
+
+```typescript
+// Full build.ts script structure
+const BUILD_CONFIG = {
+  handlers: {
+    entrypoints: "hooks/handlers/*.ts",
+    outdir: "dist/handlers",
+    target: "bun" as const,
+    minify: true,
+  },
+  viewer: {
+    entrypoints: ["hooks/viewer/server.ts"],
+    outdir: "dist/viewer",
+    target: "bun" as const,
+    minify: true,
+  },
+};
+
+async function build(): Promise<void> {
+  console.log("Building claude-hall-monitor plugin...\n");
+
+  // Clean dist directory
+  await Bun.$`rm -rf dist`;
+  await Bun.$`mkdir -p dist/handlers dist/viewer`;
+
+  // Build handlers
+  console.log("Building handlers...");
+  await buildAllHandlers();
+
+  // Build viewer
+  console.log("\nBuilding viewer...");
+  await bundleHandler("hooks/viewer/server.ts", "dist/viewer");
+
+  console.log("\n✓ Build complete!");
 }
 
-describe("Handler E2E Tests", () => {
-  it("session-start handler produces valid output", async () => {
-    const result = await executeHandler("session-start", {
-      session_id: "test-session-123",
-    });
-
-    expect(result).toHaveProperty("additionalContext");
-  });
+build().catch((err) => {
+  console.error(err);
+  process.exit(1);
 });
 ```
 
-### Viewer Server Test
+## Testing
 
-Test that the viewer server starts and serves content:
+### E2E Test Structure
 
 ```typescript
-import { spawn, sleep } from "bun";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { spawn } from "bun";
 import { join } from "node:path";
 
-async function testViewerServer(): Promise<void> {
-  const serverPath = join(import.meta.dir, "..", "dist", "viewer", "server.js");
+describe("Plugin E2E Tests", () => {
+  const distDir = join(import.meta.dir, "..", "dist");
 
-  const proc = spawn(["bun", "run", serverPath], {
-    stdout: "pipe",
-    stderr: "pipe",
-    env: {
-      ...process.env,
-      HOOK_VIEWER_PORT: "3457", // Use different port for tests
-    },
+  it("session-start handler produces valid output", async () => {
+    const input = JSON.stringify({
+      session_id: "test-123",
+      cwd: "/tmp/test",
+    });
+
+    const proc = spawn({
+      cmd: ["bun", "run", join(distDir, "handlers", "session-start.js")],
+      stdin: "pipe",
+      stdout: "pipe",
+    });
+
+    proc.stdin.write(input);
+    proc.stdin.end();
+
+    const output = await new Response(proc.stdout).text();
+    const result = JSON.parse(output);
+
+    expect(result).toHaveProperty("additionalContext");
   });
 
-  // Wait for server to start
-  await sleep(1000);
-
-  try {
-    // Test health endpoint
-    const response = await fetch("http://localhost:3457/health");
-    if (!response.ok) {
-      throw new Error(`Health check failed: ${response.status}`);
-    }
-
-    // Test SSE endpoint
-    const eventsResponse = await fetch("http://localhost:3457/events");
-    if (eventsResponse.headers.get("content-type") !== "text/event-stream") {
-      throw new Error("SSE endpoint not returning event-stream");
-    }
-
-    console.log("Viewer server tests passed!");
-  } finally {
-    proc.kill();
-  }
-}
-```
-
-## Hook Handlers
-
-### Standard Handler Pattern
-
-All handlers follow this structure:
-
-```typescript
-import { log, readInput, writeOutput } from "../utils/logger";
-import type { SessionStartHookInput } from "@anthropic-ai/claude-agent-sdk";
-
-async function main(): Promise<void> {
-  try {
-    const input = await readInput<SessionStartHookInput>();
-
-    await log("SessionStart", input.session_id, {
-      cwd: input.cwd,
-      timestamp: new Date().toISOString(),
+  it("pre-tool-use handler allows safe commands", async () => {
+    const input = JSON.stringify({
+      session_id: "test-123",
+      tool_name: "Bash",
+      tool_input: { command: "ls -la" },
     });
 
-    writeOutput({
-      additionalContext: "Session started and logged.",
+    const proc = spawn({
+      cmd: ["bun", "run", join(distDir, "handlers", "pre-tool-use.js")],
+      stdin: "pipe",
+      stdout: "pipe",
     });
-  } catch (error) {
-    // Always output valid JSON even on error
-    writeOutput({
-      error: error instanceof Error ? error.message : String(error),
-    });
-    process.exit(1);
-  }
-}
 
-main();
-```
+    proc.stdin.write(input);
+    proc.stdin.end();
 
-### Logger Utility
+    const output = await new Response(proc.stdout).text();
+    const result = JSON.parse(output);
 
-Shared logging utilities:
-
-```typescript
-import { appendFile } from "node:fs/promises";
-import { join } from "node:path";
-
-const LOG_FILE = join(import.meta.dir, "..", "hooks-log.txt");
-
-interface LogEntry {
-  timestamp: string;
-  event: string;
-  session_id: string;
-  data: Record<string, unknown>;
-}
-
-export async function log(
-  event: string,
-  session_id: string,
-  data: Record<string, unknown>
-): Promise<void> {
-  const entry: LogEntry = {
-    timestamp: new Date().toISOString(),
-    event,
-    session_id,
-    data,
-  };
-
-  await appendFile(LOG_FILE, JSON.stringify(entry) + "\n");
-}
-
-export async function readInput<T>(): Promise<T> {
-  const chunks: Uint8Array[] = [];
-  for await (const chunk of Bun.stdin.stream()) {
-    chunks.push(chunk);
-  }
-  const text = Buffer.concat(chunks).toString("utf-8");
-  return JSON.parse(text) as T;
-}
-
-export function writeOutput(output: Record<string, unknown>): void {
-  console.log(JSON.stringify(output));
-}
+    expect(result.permissionDecision).toBe("allow");
+  });
+});
 ```

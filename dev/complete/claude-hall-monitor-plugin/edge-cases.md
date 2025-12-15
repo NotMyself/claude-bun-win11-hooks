@@ -2,51 +2,61 @@
 
 | ID | Case | Handling | Affected Features |
 |----|------|----------|-------------------|
-| EC001 | Cross-platform path handling | Use `path.join()` for all path construction; normalize paths to forward slashes for shell commands on Windows | F003, F004, F005 |
-| EC002 | Bun runtime not installed | Document Bun as prerequisite in README; provide installation link; hooks will fail gracefully with error message | F007, F009, F010 |
-| EC003 | Plugin variable expansion | `${CLAUDE_PLUGIN_ROOT}` must be correctly expanded by Claude Code; if not expanded, commands will fail with "file not found" | F006 |
-| EC004 | Build output directory conflicts | Clean `dist/` directory before each build; use `--outdir` flag to ensure correct output location | F003, F004, F005 |
-| EC005 | Viewer port conflicts | Port 3456 may already be in use; existing code handles this with error message; document in README | F005, F009 |
-| EC006 | Version drift | Versions could get out of sync between plugin.json, package.json, and CHANGELOG.md; add version check to CI | F008, F011 |
-| EC007 | Large log files | hooks-log.txt may grow unbounded; document log rotation strategy; viewer handles streaming efficiently | F009 |
-| EC008 | Permission denied errors | Handler scripts need execute permission on Unix; build script should preserve permissions | F003, F004, F005 |
-| EC009 | Stale dist/ files | Old bundled files may remain if handler is renamed/removed; clean before build | F003 |
-| EC010 | Missing .claude-plugin directory | Claude Code may not recognize plugin if directory is missing or malformed; validate structure in CI | F002, F011 |
+| EC001 | Cross-platform path handling (Windows backslashes vs Unix forward slashes) | Use `node:path` join() for all path construction; normalize paths to forward slashes for shell commands | F003, F004, F005 |
+| EC002 | Bun runtime not installed on user machine | Document Bun as prerequisite; provide installation link in README; plugin.json declares runtime dependency | F000, F007 |
+| EC003 | Build failures due to TypeScript errors | Run `tsc --noEmit` before bundling; CI catches errors before release | F003, F004, F005 |
+| EC004 | Plugin variable `${CLAUDE_PLUGIN_ROOT}` not expanded at runtime | Test with actual plugin installation; document expected behavior; fall back to relative paths if not expanded | F006 |
+| EC005 | Version mismatch between plugin.json, package.json, and CHANGELOG | Create version sync script; CI validates version consistency | F008 |
+| EC006 | Viewer port 3456 already in use | Viewer already handles this with error message; document in troubleshooting | F005 |
+| EC007 | Missing dependencies during build | Bun bundler inlines all dependencies; verify bundle is self-contained with no external imports | F003, F004 |
+| EC008 | Existing .claude/hooks/ conflicts with plugin hooks | Document that plugin hooks merge with local hooks; explain precedence | F007 |
+| EC009 | GitHub Actions fails on Windows runners | Test workflows on all three OS runners (ubuntu, windows, macos) | F009, F010 |
+| EC010 | Zip archive extraction preserves permissions | Use GitHub's upload-artifact/download-artifact for consistent behavior; test on all platforms | F010 |
 
 ## Edge Case Details
 
-### EC001: Cross-Platform Path Handling
+### EC001: Cross-Platform Paths
 
-Windows uses backslashes (`\`) while Unix uses forward slashes (`/`). Key considerations:
+**Problem**: Windows uses backslashes (`\`), Unix uses forward slashes (`/`). Path strings in code or configs may break on different platforms.
 
-- `path.join()` produces OS-appropriate separators
-- `cmd.exe` has issues with backslashes in quoted paths
-- Normalize to forward slashes for shell commands: `p.replace(/\\/g, '/')`
-- The existing codebase has `normalizePath()` utility for this
+**Solution**:
+```typescript
+import { join } from "node:path";
 
-### EC003: Plugin Variable Expansion
+// Always use join() for path construction
+const handlerPath = join(rootDir, "dist", "handlers", "session-start.js");
 
-The `${CLAUDE_PLUGIN_ROOT}` variable is expanded by Claude Code's plugin system. If:
+// Normalize for shell commands (Windows cmd.exe has issues with backslashes)
+function normalizePath(p: string): string {
+  return p.replace(/\\/g, "/");
+}
+```
 
-- Plugin is installed correctly: Variable expands to actual install path
-- Plugin is run manually: Variable may not expand, causing "file not found" errors
+### EC002: Bun Not Installed
 
-For development/testing, use absolute paths or run from the plugin root directory.
+**Problem**: Plugin requires Bun runtime but user may not have it installed.
 
-### EC006: Version Drift
+**Solution**:
+1. Declare in plugin.json: `"runtime": "bun"`
+2. README includes installation prerequisites
+3. Hooks fail gracefully with clear error message
 
-Three files must stay in sync:
+### EC004: Plugin Variable Expansion
 
-1. `.claude-plugin/plugin.json` - `"version": "1.0.0"`
-2. `hooks/package.json` - `"version": "1.0.0"`
-3. `CHANGELOG.md` - `## [1.0.0]` section header
+**Problem**: If `${CLAUDE_PLUGIN_ROOT}` is not expanded, hooks will fail to find their scripts.
 
-The CI workflow should verify these match on every PR.
+**Test Strategy**:
+1. Unit test: Mock variable expansion
+2. Integration test: Install plugin via marketplace, verify hooks execute
+3. Fallback: Document manual path configuration if variable expansion fails
 
-### EC007: Large Log Files
+### EC005: Version Sync
 
-The `hooks-log.txt` file grows with each hook event. Mitigation strategies:
+**Problem**: Version declared in multiple files can drift.
 
-- Document recommended log rotation (e.g., `logrotate` on Linux)
-- Viewer uses SSE streaming so doesn't load entire file
-- Users can clear log manually or on session start
+**Files with version**:
+- `.claude-plugin/plugin.json` - `version` field
+- `hooks/package.json` - `version` field
+- `CHANGELOG.md` - Header for each release
+
+**Solution**: CI job validates all versions match before allowing release.

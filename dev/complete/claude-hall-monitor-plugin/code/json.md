@@ -1,143 +1,127 @@
-# JSON Patterns
+# JSON Configuration Patterns
 
-## Plugin Configuration
+## Plugin Manifest
 
-### plugin.json Schema
-
-The plugin manifest file:
+### plugin.json
 
 ```json
 {
   "name": "claude-hall-monitor",
   "version": "1.0.0",
-  "description": "Comprehensive hook monitoring with realtime viewer UI for Claude Code",
+  "description": "All 12 hook handlers, realtime log viewer, rules, and slash commands for Claude Code",
   "author": "NotMyself",
-  "license": "MIT",
   "repository": "https://github.com/NotMyself/claude-hall-monitor",
-  "keywords": ["claude-code", "hooks", "monitoring", "viewer"],
-  "bun": ">=1.0.0",
-  "files": [
-    "dist/**/*",
-    "hooks/**/*",
-    "rules/**/*",
-    "commands/**/*",
-    "CHANGELOG.md",
-    "README.md"
+  "runtime": "bun",
+  "keywords": ["hooks", "logging", "viewer", "monitoring"]
+}
+```
+
+## Hook Configurations
+
+### hooks.json - Complete Configuration
+
+```json
+{
+  "hooks": [
+    {
+      "matcher": { "type": "always" },
+      "hooks": [
+        {
+          "type": "SessionStart",
+          "command": "bun run ${CLAUDE_PLUGIN_ROOT}/dist/handlers/session-start.js"
+        },
+        {
+          "type": "SessionEnd",
+          "command": "bun run ${CLAUDE_PLUGIN_ROOT}/dist/handlers/session-end.js"
+        },
+        {
+          "type": "UserPromptSubmit",
+          "command": "bun run ${CLAUDE_PLUGIN_ROOT}/dist/handlers/user-prompt-submit.js"
+        },
+        {
+          "type": "PreToolUse",
+          "command": "bun run ${CLAUDE_PLUGIN_ROOT}/dist/handlers/pre-tool-use.js"
+        },
+        {
+          "type": "PostToolUse",
+          "command": "bun run ${CLAUDE_PLUGIN_ROOT}/dist/handlers/post-tool-use.js"
+        },
+        {
+          "type": "PostToolUseFailure",
+          "command": "bun run ${CLAUDE_PLUGIN_ROOT}/dist/handlers/post-tool-use-failure.js"
+        },
+        {
+          "type": "Notification",
+          "command": "bun run ${CLAUDE_PLUGIN_ROOT}/dist/handlers/notification.js"
+        },
+        {
+          "type": "Stop",
+          "command": "bun run ${CLAUDE_PLUGIN_ROOT}/dist/handlers/stop.js"
+        },
+        {
+          "type": "SubagentStart",
+          "command": "bun run ${CLAUDE_PLUGIN_ROOT}/dist/handlers/subagent-start.js"
+        },
+        {
+          "type": "SubagentStop",
+          "command": "bun run ${CLAUDE_PLUGIN_ROOT}/dist/handlers/subagent-stop.js"
+        },
+        {
+          "type": "PreCompact",
+          "command": "bun run ${CLAUDE_PLUGIN_ROOT}/dist/handlers/pre-compact.js"
+        },
+        {
+          "type": "PermissionRequest",
+          "command": "bun run ${CLAUDE_PLUGIN_ROOT}/dist/handlers/permission-request.js"
+        }
+      ]
+    }
   ]
 }
 ```
 
-### hooks.json Schema
+### hooks.json - Development Version (Source Files)
 
-Hook configurations using the plugin root variable:
+For local development before building:
 
 ```json
 {
-  "hooks": {
-    "UserPromptSubmit": [
-      {
-        "command": "bun run ${CLAUDE_PLUGIN_ROOT}/dist/handlers/user-prompt-submit.js",
-        "timeout": 10000
-      }
-    ],
-    "PreToolUse": [
-      {
-        "command": "bun run ${CLAUDE_PLUGIN_ROOT}/dist/handlers/pre-tool-use.js",
-        "timeout": 10000
-      }
-    ],
-    "PostToolUse": [
-      {
-        "command": "bun run ${CLAUDE_PLUGIN_ROOT}/dist/handlers/post-tool-use.js",
-        "timeout": 10000
-      }
-    ],
-    "PostToolUseFailure": [
-      {
-        "command": "bun run ${CLAUDE_PLUGIN_ROOT}/dist/handlers/post-tool-use-failure.js",
-        "timeout": 10000
-      }
-    ],
-    "Notification": [
-      {
-        "command": "bun run ${CLAUDE_PLUGIN_ROOT}/dist/handlers/notification.js",
-        "timeout": 10000
-      }
-    ],
-    "SessionStart": [
-      {
-        "command": "bun run ${CLAUDE_PLUGIN_ROOT}/dist/handlers/session-start.js",
-        "timeout": 10000
-      }
-    ],
-    "SessionEnd": [
-      {
-        "command": "bun run ${CLAUDE_PLUGIN_ROOT}/dist/handlers/session-end.js",
-        "timeout": 10000
-      }
-    ],
-    "Stop": [
-      {
-        "command": "bun run ${CLAUDE_PLUGIN_ROOT}/dist/handlers/stop.js",
-        "timeout": 10000
-      }
-    ],
-    "SubagentStart": [
-      {
-        "command": "bun run ${CLAUDE_PLUGIN_ROOT}/dist/handlers/subagent-start.js",
-        "timeout": 10000
-      }
-    ],
-    "SubagentStop": [
-      {
-        "command": "bun run ${CLAUDE_PLUGIN_ROOT}/dist/handlers/subagent-stop.js",
-        "timeout": 10000
-      }
-    ],
-    "PreCompact": [
-      {
-        "command": "bun run ${CLAUDE_PLUGIN_ROOT}/dist/handlers/pre-compact.js",
-        "timeout": 10000
-      }
-    ],
-    "PermissionRequest": [
-      {
-        "command": "bun run ${CLAUDE_PLUGIN_ROOT}/dist/handlers/permission-request.js",
-        "timeout": 10000
-      }
-    ]
-  }
+  "hooks": [
+    {
+      "matcher": { "type": "always" },
+      "hooks": [
+        {
+          "type": "SessionStart",
+          "command": "bun run ${CLAUDE_PLUGIN_ROOT}/hooks/handlers/session-start.ts"
+        }
+      ]
+    }
+  ]
 }
 ```
 
 ## Package Configuration
 
-### package.json Scripts
-
-Build and test scripts for the plugin:
+### package.json Updates
 
 ```json
 {
-  "name": "claude-hall-monitor-hooks",
+  "name": "claude-hall-monitor",
   "version": "1.0.0",
-  "type": "module",
+  "description": "Claude Code hooks plugin with realtime log viewer",
   "scripts": {
-    "build": "bun run ../build.ts",
-    "build:watch": "bun run --watch ../build.ts",
-    "tsc": "tsc --noEmit",
-    "test": "vitest",
-    "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage",
-    "test:e2e": "bun run ../test-e2e.ts",
-    "viewer": "bun run viewer/server.ts",
-    "viewer:dev": "bun run --watch viewer/server.ts"
+    "build": "bun run build.ts",
+    "build:handlers": "bun build hooks/handlers/*.ts --outdir dist/handlers --target bun --minify",
+    "build:viewer": "bun build hooks/viewer/server.ts --outdir dist/viewer --target bun --minify",
+    "test": "cd hooks && bun run test",
+    "test:run": "cd hooks && bun run test:run",
+    "test:e2e": "bun run test-e2e.ts",
+    "viewer": "bun run hooks/viewer/server.ts",
+    "typecheck": "cd hooks && bun run tsc --noEmit"
   },
-  "dependencies": {},
   "devDependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.1.0",
     "@types/bun": "latest",
-    "@vue/test-utils": "^2.4.0",
-    "happy-dom": "^12.0.0",
     "typescript": "^5.0.0",
     "vitest": "^1.0.0"
   }
@@ -147,8 +131,6 @@ Build and test scripts for the plugin:
 ## Changelog Format
 
 ### CHANGELOG.md Structure
-
-Following Keep a Changelog format:
 
 ```markdown
 # Changelog
@@ -163,30 +145,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2024-12-14
 
 ### Added
-- Initial release of claude-hall-monitor plugin
-- 12 hook handlers with JSONL logging
-- Realtime log viewer UI with SSE streaming
-- 6 rules files for Claude Code conventions
-- 3 slash commands for planning and orchestration
+- Initial plugin release
+- All 12 hook handlers with JSONL logging
+- Realtime log viewer UI (Vue.js)
+- 6 rules files for Claude Code guidance
+- 3 slash commands
+- Build system for bundling TypeScript to JavaScript
+- GitHub Actions CI/CD workflows
 - Cross-platform support (Windows, macOS, Linux)
-- Security features: rate limiting, CORS, CSP headers
 
-### Security
-- Network binding restricted to localhost only
-- Path traversal protection on file endpoints
-- Session ID validation
-- Bearer token authentication for shutdown endpoint
+### Changed
+- Project structure from .claude/ to root level for plugin distribution
 
 [Unreleased]: https://github.com/NotMyself/claude-hall-monitor/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/NotMyself/claude-hall-monitor/releases/tag/v1.0.0
 ```
 
-## Manifest Format
+## Marketplace Entry
 
-### manifest.jsonl Entry
-
-Each feature as a JSON line:
+### marketplace.json Addition
 
 ```json
-{"id":"F001","file":"prompts/01-restructure.md","description":"Project restructure - move files from .claude/ to root","depends_on":["F000"],"edge_cases":[],"decisions":["D001"],"code_refs":[],"status":"pending","verification":"ls hooks/ rules/ commands/"}
+{
+  "name": "claude-hall-monitor",
+  "description": "All 12 hook handlers, realtime log viewer, rules, and slash commands",
+  "repository": "https://github.com/NotMyself/claude-hall-monitor",
+  "version": "1.0.0",
+  "author": "NotMyself",
+  "tags": ["hooks", "logging", "viewer", "monitoring", "bun"],
+  "runtime": "bun"
+}
+```
+
+## Test Fixtures
+
+### session-start-input.json
+
+```json
+{
+  "session_id": "test-session-abc123",
+  "cwd": "/Users/test/project",
+  "env": {
+    "HOME": "/Users/test"
+  }
+}
+```
+
+### pre-tool-use-input.json
+
+```json
+{
+  "session_id": "test-session-abc123",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "ls -la",
+    "description": "List files in current directory"
+  }
+}
+```
+
+### Expected Output Format
+
+```json
+{
+  "additionalContext": "Session initialized at 2024-12-14T10:30:00.000Z"
+}
+```
+
+```json
+{
+  "permissionDecision": "allow",
+  "permissionDecisionReason": "Safe read-only command"
+}
 ```

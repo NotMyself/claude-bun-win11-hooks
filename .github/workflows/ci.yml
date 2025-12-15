@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.bun/install/cache
+            hooks/node_modules
+          key: ${{ runner.os }}-bun-${{ hashFiles('hooks/bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install dependencies
+        run: |
+          cd hooks
+          bun install
+
+      - name: Type check
+        run: |
+          cd hooks
+          bun run tsc --noEmit
+
+      - name: Run tests
+        run: |
+          cd hooks
+          bun run test:run
+
+      - name: Build bundles
+        run: bun run build.ts
+
+      - name: Verify bundles exist
+        run: |
+          ls -la dist/handlers/
+          ls -la dist/viewer/
+        shell: bash
+
+      - name: Test handler execution
+        run: |
+          echo '{"session_id":"test"}' | bun run dist/handlers/session-start.js
+        shell: bash
+
+  version-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check version consistency
+        run: |
+          PLUGIN_VERSION=$(jq -r '.version' .claude-plugin/plugin.json)
+          PACKAGE_VERSION=$(jq -r '.version' hooks/package.json)
+          CHANGELOG_VERSION=$(grep '## \[' CHANGELOG.md | grep -v 'Unreleased' | head -1 | sed 's/.*\[\([^]]*\)\].*/\1/')
+
+          echo "plugin.json:  $PLUGIN_VERSION"
+          echo "package.json: $PACKAGE_VERSION"
+          echo "CHANGELOG.md: $CHANGELOG_VERSION"
+
+          if [ "$PLUGIN_VERSION" != "$PACKAGE_VERSION" ]; then
+            echo "❌ Version mismatch between plugin.json and package.json"
+            exit 1
+          fi
+
+          if [ "$PLUGIN_VERSION" != "$CHANGELOG_VERSION" ]; then
+            echo "❌ Version mismatch between plugin.json and CHANGELOG.md"
+            exit 1
+          fi
+
+          echo "✓ All versions match: $PLUGIN_VERSION"
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate JSON files
+        run: |
+          echo "Validating plugin.json..."
+          jq empty .claude-plugin/plugin.json
+
+          echo "Validating hooks.json..."
+          jq empty .claude-plugin/hooks.json
+
+          echo "Validating package.json..."
+          jq empty hooks/package.json
+
+          # Note: tsconfig.json is JSONC (has comments), validated by tsc instead
+
+          echo "✓ All JSON files are valid"

@@ -2,50 +2,57 @@
 
 | ID | Decision | Rationale | Affected Features |
 |----|----------|-----------|-------------------|
-| D001 | Create new repo vs rename | User preference - keeps original development repo intact for continued experimentation while providing a clean distribution repository | F000, F013 |
-| D002 | Bundle to JavaScript | Eliminates `bun install` step for end users; faster startup; still requires Bun runtime but no dependency installation | F003, F004, F005, F006 |
-| D003 | Semantic versioning starting at 1.0.0 | Industry standard versioning; 1.0.0 indicates initial stable release ready for production use | F007, F008 |
-| D004 | Keep a Changelog format | Standard format from keepachangelog.com for documenting version history; widely recognized and easy to parse | F007 |
-| D005 | GitHub Actions for CI/CD | Automated build, test, and release on PR/tag; native integration with GitHub releases | F011, F012 |
-| D006 | Zip archive for releases | Easy distribution format; contains all plugin files in a single downloadable artifact | F012 |
-| D007 | Use ${CLAUDE_PLUGIN_ROOT} in hook commands | Standard pattern from claude-dotnet-marketplace; expanded at runtime to the actual plugin install location | F006 |
+| D001 | Rename existing repo to `claude-hall-monitor` | Single repo for development and distribution simplifies maintenance; avoids syncing two repositories | F007 |
+| D002 | Bundle TypeScript to standalone JavaScript | Eliminates `bun install` step for users; faster startup; inlined dependencies reduce failure points; still requires Bun runtime for execution | F003, F004, F005 |
+| D003 | Start at semantic version 1.0.0 | Industry standard versioning; signals production-ready initial release; MAJOR.MINOR.PATCH allows clear communication of change impact | F008 |
+| D004 | Use Keep a Changelog format | Standard format widely recognized; categories (Added, Changed, Fixed, etc.) make changes scannable; links to comparison views | F008 |
+| D005 | GitHub Actions for CI/CD | Native integration with GitHub; free for public repos; workflow files version-controlled with code | F009, F010 |
+| D006 | Zip archive for releases | Universal format; easy to download and extract; GitHub releases support zip attachments natively | F010 |
+| D007 | Use `${CLAUDE_PLUGIN_ROOT}` in hook commands | Standard pattern from claude-dotnet-marketplace; expanded at runtime to plugin install location; enables portable paths | F002, F006 |
 
 ## Decision Details
 
-### D001: New Repository Strategy
+### D001: Repository Strategy
 
-Creating `NotMyself/claude-hall-monitor` as a separate repository rather than renaming the current repo:
+**Context**: The project currently lives at `bobby/claude-bun-win11-hooks`. For plugin distribution, a cleaner name is needed.
 
-- **Pros**: Keeps development history separate, allows continued experimentation in original repo, clean git history for distribution
-- **Cons**: Requires manual sync if changes are made to original, two repos to maintain
-- **Mitigation**: Once plugin is stable, development can shift entirely to the new repo
+**Options Considered**:
+1. Create new repo `claude-hall-monitor`, maintain both
+2. Rename existing repo, use for both dev and distribution
+3. Fork existing repo with new name
 
-### D002: JavaScript Bundling
+**Choice**: Option 2 - Rename existing repo
 
-Using Bun.build to create standalone JavaScript bundles:
+**Consequences**:
+- Git history preserved
+- Existing forks/clones will break (acceptable for this project)
+- Simpler maintenance with single source of truth
 
-- All 12 handlers bundled individually to `dist/handlers/*.js`
-- Viewer server bundled to `dist/viewer/server.js`
-- Dependencies inlined (no node_modules needed)
-- TypeScript compiled to JavaScript
+### D002: Build Strategy
 
-### D003: Version 1.0.0
+**Context**: Plugin needs to work on user machines without running `bun install`.
 
-Starting at 1.0.0 rather than 0.x.x:
+**Options Considered**:
+1. Distribute TypeScript source, require users to build
+2. Bundle to JavaScript with inlined dependencies
+3. Publish to npm, use npm install
 
-- All core functionality is implemented and tested
-- Hook handlers are stable
-- Viewer UI is production-ready
-- API contract (hooks.json format) is stable
+**Choice**: Option 2 - Bundle to JavaScript
 
-### D007: Plugin Root Variable
+**Consequences**:
+- Larger distribution size (dependencies inlined)
+- No runtime dependency resolution needed
+- Bun still required as runtime (not bundled)
+- Build step added to development workflow
 
-The `${CLAUDE_PLUGIN_ROOT}` variable in hooks.json:
+### D007: Plugin Path Variables
 
-```json
-{
-  "command": "bun run ${CLAUDE_PLUGIN_ROOT}/dist/handlers/session-start.js"
-}
-```
+**Context**: Hook commands need to reference files within the plugin directory, but the install location varies per user.
 
-This gets expanded by Claude Code at runtime to the actual installation path, enabling the plugin to work regardless of where it's installed.
+**Pattern**: `bun run ${CLAUDE_PLUGIN_ROOT}/dist/handlers/session-start.js`
+
+**Expansion**: At runtime, `${CLAUDE_PLUGIN_ROOT}` becomes the absolute path to the plugin's install directory.
+
+**Example**:
+- Windows: `C:\Users\bobby\.claude\plugins\claude-hall-monitor`
+- macOS: `/Users/bobby/.claude/plugins/claude-hall-monitor`

@@ -6,160 +6,151 @@ See `context.md` for feature rationale and architecture vision.
 
 ## Prior Work
 
-None - this is the first feature.
+None - this is the initialization step.
 
 ## Objective
 
-Create a new GitHub repository `NotMyself/claude-hall-monitor` with initial structure and clean git history.
+Verify prerequisites and prepare the project for plugin conversion by restructuring files from `.claude/` to root level.
 
 > **Scope Constraint**: It is unacceptable to implement features beyond this task's scope.
 
 ## Relevant Decisions
 
 From `decisions.md`:
-
-- **D001**: Create new repo vs rename — Keeps original development repo intact for continued experimentation
+- **D001**: Rename repo to `claude-hall-monitor` — Establishes the plugin identity
 
 ## Edge Cases to Handle
 
-None for this feature.
+From `edge-cases.md`:
+- **EC002**: Bun runtime not installed → Verify Bun is available before proceeding
 
 ## Code References
 
-- `code/json.md#plugin-json-schema` - Reference for plugin.json structure (created in F002)
+Read these sections before implementing:
+- `code/bash.md#project-structure-commands` - File move commands
 
 ## Constraints
 
 - See `constraints.md` for global rules
-- Repository must be public
-- Use MIT license
-- Initialize with README.md placeholder
+- Do NOT modify any source code yet - only move files
+- Preserve git history where possible
 
-## Files to Create
+## Prerequisites Check
 
-| File | Purpose |
-|------|---------|
-| `README.md` | Placeholder with project name |
-| `.gitignore` | Standard Node/Bun ignores |
-| `LICENSE` | MIT license |
-
-## Implementation Details
-
-### 1. Create Repository
-
-Create new repository on GitHub:
-
-- Name: `claude-hall-monitor`
-- Owner: `NotMyself`
-- Description: "Comprehensive hook monitoring with realtime viewer UI for Claude Code"
-- Public: Yes
-- Initialize with README: No (we'll add our own)
-
-### 2. Clone and Initialize
+Before proceeding, verify:
 
 ```bash
-git clone https://github.com/NotMyself/claude-hall-monitor.git
-cd claude-hall-monitor
+# Check Bun is installed
+bun --version
+
+# Expected: 1.x.x or higher
 ```
 
-### 3. Create Initial Files
+## Files to Move
 
-**README.md**:
-```markdown
-# Claude Hall Monitor
+| Source | Destination |
+|--------|-------------|
+| `.claude/hooks/handlers/` | `hooks/handlers/` |
+| `.claude/hooks/utils/` | `hooks/utils/` |
+| `.claude/hooks/viewer/` | `hooks/viewer/` |
+| `.claude/hooks/package.json` | `hooks/package.json` |
+| `.claude/hooks/tsconfig.json` | `hooks/tsconfig.json` |
+| `.claude/hooks/hooks-log.txt` | `hooks/hooks-log.txt` |
+| `.claude/rules/` | `rules/` |
+| `.claude/commands/` | `commands/` |
 
-Comprehensive hook monitoring with realtime viewer UI for Claude Code.
+## Directories to Create
 
-> This plugin is under development. See releases for stable versions.
-```
+| Directory | Purpose |
+|-----------|---------|
+| `.claude-plugin/` | Plugin manifest files (created in F002) |
+| `dist/` | Build output (created in F003) |
 
-**.gitignore**:
-```
-# Dependencies
-node_modules/
-.bun/
+## Implementation Steps
 
-# Build output
-dist/
+1. **Verify Bun installation**
+   ```bash
+   bun --version
+   ```
 
-# Logs
-*.log
-hooks-log.txt
+2. **Create new directory structure**
+   ```bash
+   mkdir -p hooks/handlers hooks/utils hooks/viewer
+   mkdir -p rules
+   mkdir -p commands
+   ```
 
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
+3. **Move hook files**
+   ```bash
+   # Use git mv to preserve history
+   git mv .claude/hooks/handlers/* hooks/handlers/
+   git mv .claude/hooks/utils/* hooks/utils/
+   git mv .claude/hooks/viewer/* hooks/viewer/
+   git mv .claude/hooks/package.json hooks/
+   git mv .claude/hooks/tsconfig.json hooks/
+   git mv .claude/hooks/hooks-log.txt hooks/
+   ```
 
-# OS
-.DS_Store
-Thumbs.db
+4. **Move rules**
+   ```bash
+   git mv .claude/rules/* rules/
+   ```
 
-# Test coverage
-coverage/
-```
+5. **Move commands**
+   ```bash
+   git mv .claude/commands/* commands/
+   ```
 
-**LICENSE** (MIT):
-```
-MIT License
+6. **Clean up empty directories**
+   ```bash
+   rm -rf .claude/hooks .claude/rules .claude/commands
+   ```
 
-Copyright (c) 2024 NotMyself
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
+7. **Update .claude/settings.json** to point to new locations (temporary, will be replaced by hooks.json)
 
 ## Acceptance Criteria
 
-- [ ] Repository exists at `https://github.com/NotMyself/claude-hall-monitor`
-- [ ] README.md contains project name and description
-- [ ] .gitignore ignores node_modules, dist, logs
-- [ ] LICENSE file contains MIT license
-- [ ] Initial commit exists with all files
+- [ ] Bun version 1.x or higher is installed
+- [ ] All files moved from `.claude/hooks/` to `hooks/`
+- [ ] All files moved from `.claude/rules/` to `rules/`
+- [ ] All files moved from `.claude/commands/` to `commands/`
+- [ ] No source code modifications made
+- [ ] Project structure matches target layout
 
 ## Verification
 
 ```bash
-# Verify repository exists and is cloneable
-git clone https://github.com/NotMyself/claude-hall-monitor.git /tmp/verify-hall-monitor
-cd /tmp/verify-hall-monitor
-ls -la
-cat README.md
-cat .gitignore
-cat LICENSE
+# Verify directory structure
+ls -la hooks/handlers/
+ls -la hooks/utils/
+ls -la hooks/viewer/
+ls -la rules/
+ls -la commands/
+
+# Verify key files exist
+test -f hooks/package.json && echo "✓ package.json"
+test -f hooks/tsconfig.json && echo "✓ tsconfig.json"
+test -d hooks/handlers && echo "✓ handlers directory"
+
+# Count handlers (should be 12)
+ls hooks/handlers/*.ts | wc -l
 ```
 
 ## Commit
 
 ```bash
-git add README.md .gitignore LICENSE
-git commit -m "chore: initialize claude-hall-monitor repository
+git add -A
+git commit -m "chore: restructure project for plugin distribution
+
+Move files from .claude/ to root level:
+- .claude/hooks/ → hooks/
+- .claude/rules/ → rules/
+- .claude/commands/ → commands/
 
 Implements: F000
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>"
-
-git push origin main
+Decisions: D001"
 ```
 
 ## Next
 
-Proceed to: `prompts/01-restructure.md` (F001)
+Proceed to: `prompts/01-plugin-manifest.md` (F001)

@@ -6,87 +6,97 @@ See `context.md` for the feature summary and architectural vision.
 
 ## Architectural Decisions
 
-See `decisions.md` before making implementation choices. Reference decision IDs in commit messages when relevant.
+See `decisions.md` before making implementation choices. Reference decision IDs in commit messages when relevant:
+- **D001**: Rename repo to `claude-hall-monitor`
+- **D002**: Bundle to JavaScript (not distribute TypeScript)
+- **D003**: Semantic versioning starting at 1.0.0
+- **D004**: Keep a Changelog format
+- **D005**: GitHub Actions for CI/CD
+- **D006**: Zip archive for releases
+- **D007**: Use `${CLAUDE_PLUGIN_ROOT}` in hook commands
 
 ## Edge Cases
 
-See `edge-cases.md` for cases that may span multiple features. Each prompt lists its relevant edge cases.
+See `edge-cases.md` for cases that span multiple features:
+- **EC001**: Cross-platform path handling
+- **EC002**: Bun runtime prerequisite
+- **EC003**: Build failure handling
+- **EC004**: Plugin variable expansion
+- **EC005**: Version sync validation
+- **EC006**: Viewer port conflicts
 
 ## Code Patterns
 
-See `code/` directory for reusable code samples organized by language. Each prompt references specific sections:
-
-- Read the referenced code sections before implementing
-- Follow the established patterns for consistency
-- Code is organized by progressive disclosure (simple → complex)
-
-Available code references:
-
-- `code/typescript.md` - Build scripts, handler patterns, testing utilities
-- `code/json.md` - Plugin configuration, hooks.json, package.json
+See `code/` directory for reusable code samples:
+- `code/typescript.md` - Types, build scripts, testing patterns
+- `code/json.md` - Plugin manifest, hooks config, package.json
 - `code/yaml.md` - GitHub Actions workflows
-- `code/bash.md` - Build and verification commands
+- `code/bash.md` - Shell commands for build/test/release
 
 ## Testing Philosophy
 
-See `testing-strategy.md` for the holistic testing approach.
+See `testing-strategy.md` for the holistic testing approach:
+- Unit tests with Vitest
+- Build verification
+- E2E testing
+- Cross-platform CI
 
-## Source Repository
+## MCP Tools (if available)
 
-The source code is in the `claude-bun-win11-hooks` repository. Key directories:
+These tools may be available to assist implementation. Check availability before use.
 
-- `.claude/hooks/handlers/` - TypeScript hook handlers (12 files)
-- `.claude/hooks/utils/` - Shared utilities (logger.ts)
-- `.claude/hooks/viewer/` - Realtime log viewer
-- `.claude/rules/` - 6 rule files
-- `.claude/commands/` - 3 slash commands
-
-## Target Repository
-
-Create a new repository `NotMyself/claude-hall-monitor` with restructured layout:
-
-- `hooks/handlers/` - TypeScript source
-- `hooks/utils/` - Shared utilities
-- `hooks/viewer/` - Viewer source
-- `dist/handlers/` - Bundled JS handlers
-- `dist/viewer/` - Bundled viewer
-- `rules/` - Rule files
-- `commands/` - Slash commands
-- `.claude-plugin/` - Plugin metadata
+- **Playwright MCP** (optional): `browser_navigate`, `browser_snapshot`, `browser_click`, `browser_type`, `browser_take_screenshot`, `browser_console_messages` for E2E testing. Use `host.docker.internal` instead of `localhost` for local servers.
+- **Context7 MCP** (optional): `resolve-library-id`, `get-library-docs` for fetching up-to-date library documentation.
+- **Documentation MCP** (optional): Search Microsoft/Azure docs for official guidance.
 
 ## Rules
 
 1. **One feature per session** - Do not implement beyond the scope of the current prompt
-2. **Commit after each feature** - Create a commit with the specified message format
-3. **Run verification before marking complete** - Execute the verification command
-4. **Reference decision IDs** - When implementing code related to a decision
-5. **Follow code patterns** - Use patterns from the `code/` directory
-6. **Cross-platform paths** - Use `path.join()` and normalize for shell commands
-7. **No dependencies in dist/** - All dependencies must be inlined during bundling
-8. **Version consistency** - Keep versions in sync across plugin.json, package.json, CHANGELOG.md
+2. **Commit after each feature** - Create atomic commits with feature ID references
+3. **Run verification before marking complete** - Execute the verification command in each prompt
+4. **Reference decision IDs** - When implementing code related to a decision, mention it
+5. **Follow code patterns** - Use patterns from the `code/` directory for consistency
+6. **Cross-platform paths** - Always use `node:path` join() for path construction
+7. **Test on all platforms** - CI runs on ubuntu, windows, macos
+
+## File Naming Conventions
+
+- Hook handlers: `kebab-case.ts` (e.g., `session-start.ts`)
+- Bundled output: Same name with `.js` extension
+- Workflow files: `kebab-case.yml` (e.g., `ci.yml`, `release.yml`)
+- Test files: `*.test.ts`
 
 ## Commit Message Format
 
 ```
-feat(scope): description
+<type>(<scope>): <description>
 
-Implements: F00X
-Decisions: D00X, D00Y (if applicable)
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>
+Implements: <feature-id>
+Decisions: <decision-ids>
 ```
 
-## Prerequisites
+Types: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`
 
-- Bun runtime (v1.0.0 or later)
-- Git
-- GitHub account with access to NotMyself organization
+Example:
+```
+feat(build): add TypeScript bundling with Bun
 
-## Environment Variables
+Implements: F003
+Decisions: D002
+```
 
-The viewer supports these environment variables:
+## Version Sync Requirement
 
-- `HOOK_VIEWER_HOST` - Bind address (default: localhost)
-- `HOOK_VIEWER_PORT` - Port number (default: 3456)
+All three files must have matching versions:
+- `.claude-plugin/plugin.json`
+- `hooks/package.json`
+- `CHANGELOG.md`
+
+CI validates this before releases.
+
+## Security Considerations
+
+- Never commit secrets or credentials
+- Viewer binds to localhost only
+- Validate all file paths to prevent traversal
+- Use HTTPS for external resources

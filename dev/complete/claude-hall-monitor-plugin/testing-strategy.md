@@ -2,140 +2,160 @@
 
 ## Philosophy
 
-Testing for the Claude Hall Monitor plugin follows a layered approach:
+The plugin must work reliably across platforms and through the distribution pipeline. Testing covers three levels:
 
-1. **Unit Tests**: Fast, isolated tests for individual components
-2. **Integration Tests**: Tests for component interactions (viewer server, SSE streaming)
-3. **E2E Tests**: Full hook execution verification with simulated Claude Code events
-4. **Build Verification**: Ensure bundled output is valid and executable
-
-All tests run with Vitest and use happy-dom for browser API mocking where needed.
+1. **Unit Tests** - Individual handlers and utilities work correctly
+2. **Build Tests** - Bundles compile without errors and are self-contained
+3. **E2E Tests** - Complete plugin works when installed via marketplace
 
 ## Test Types
 
 ### Unit Tests
 
-Located in `hooks/viewer/__tests__/`:
+**Tool**: Vitest with happy-dom for browser API mocking
 
-- **`components.test.ts`**: Vue component unit tests
-- **`server.test.ts`**: Server endpoint tests
-- **`setup.ts`**: Test environment setup with happy-dom
+**Location**: `hooks/viewer/__tests__/`
 
-Run with:
+**Run Command**: `bun run test:run` (from hooks/ directory)
+
+**Coverage**:
+- Hook handler input/output contracts
+- Utility functions (logger, security)
+- Vue components (viewer UI)
+
+**Existing Tests**:
+- `components.test.ts` - Vue component unit tests
+- `server.test.ts` - Server endpoint tests
+
+### Build Tests
+
+**Purpose**: Verify TypeScript compiles and bundles are valid JavaScript
+
+**Commands**:
 ```bash
-cd hooks
-bun run test:run
+# Type checking
+bun run tsc --noEmit
+
+# Build all bundles
+bun run build
+
+# Verify bundles execute without errors
+bun run dist/handlers/session-start.js < test-input.json
 ```
 
-### Integration Tests
-
-Test component interactions:
-
-- SSE streaming behavior
-- Log file reading and parsing
-- Security middleware (rate limiting, CORS, CSP)
+**Verification Points**:
+- No TypeScript errors
+- All 12 handlers bundle successfully
+- Viewer server bundles successfully
+- No external imports in bundles (all dependencies inlined)
 
 ### E2E Tests
 
-New `test:e2e.ts` script verifies:
+**Purpose**: Verify plugin works when installed via marketplace
 
-1. Each bundled handler can be executed
-2. Handlers produce valid JSON output
-3. Log entries are written correctly
-4. Viewer server starts and serves content
+**Tool**: Custom test script (`test:e2e.ts`)
 
-Run with:
-```bash
-bun run test:e2e.ts
+**Test Flow**:
+1. Build plugin bundles
+2. Create temp plugin directory structure
+3. Simulate hook invocations with test inputs
+4. Verify outputs match expected format
+5. Test viewer starts and serves UI
+
+**Key Scenarios**:
+- SessionStart hook logs correctly and starts viewer
+- PreToolUse hook can allow/deny/modify
+- PostToolUse hook can inject context
+- SessionEnd hook stops viewer
+- All 12 hooks produce valid JSON output
+
+## CI/CD Testing
+
+### Pull Request Workflow (ci.yml)
+
+```yaml
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - bun install
+      - bun run tsc --noEmit
+      - bun run test:run
+      - bun run build
 ```
 
-### Build Verification
+### Release Workflow (release.yml)
 
-Ensure the build process succeeds and output is valid:
-
-```bash
-# Type check
-bun run tsc --noEmit
-
-# Build all handlers and viewer
-bun run build
-
-# Verify output exists
-ls dist/handlers/*.js
-ls dist/viewer/server.js
+```yaml
+jobs:
+  release:
+    steps:
+      - bun install
+      - bun run test:run
+      - bun run build
+      - # Create zip archive
+      - # Upload to GitHub release
 ```
 
-## Test Patterns
+## Test Data
 
-### Mocking File System
+### Hook Input Fixtures
 
-Use `join()` for mock paths to ensure platform-correct separators:
+Create test fixtures for each hook type at `hooks/__tests__/fixtures/`:
 
-```typescript
-import { join } from "node:path";
+```json
+// session-start.json
+{
+  "session_id": "test-session-123",
+  "cwd": "/tmp/test-project"
+}
 
-const MOCK_DIR = join("/mock", "path");
-
-mockExistsSync.mockImplementation((path: string) => {
-  return path === MOCK_DIR || path === join(MOCK_DIR, "file.json");
-});
-```
-
-### Testing Hook Handlers
-
-Simulate stdin input and capture stdout output:
-
-```typescript
-import { spawn } from "bun";
-
-const proc = spawn(["bun", "run", "dist/handlers/session-start.js"], {
-  stdin: "pipe",
-  stdout: "pipe",
-});
-
-proc.stdin.write(JSON.stringify(mockInput));
-proc.stdin.end();
-
-const output = await new Response(proc.stdout).text();
-const result = JSON.parse(output);
-```
-
-### Testing SSE Streaming
-
-Use EventSource or fetch with ReadableStream:
-
-```typescript
-const response = await fetch("http://localhost:3456/events");
-const reader = response.body!.getReader();
-const decoder = new TextDecoder();
-
-while (true) {
-  const { done, value } = await reader.read();
-  if (done) break;
-  const text = decoder.decode(value);
-  // Parse SSE events from text
+// pre-tool-use.json
+{
+  "session_id": "test-session-123",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "ls -la"
+  }
 }
 ```
 
-## CI Integration
+### Expected Outputs
 
-The `ci.yml` workflow runs:
+```json
+// session-start expected
+{
+  "additionalContext": "Session clear at ..."
+}
 
-1. `bun install` - Install dev dependencies
-2. `bun run tsc --noEmit` - Type checking
-3. `bun run test:run` - Unit tests
-4. `bun run build` - Build verification
-5. `bun run test:e2e.ts` - E2E tests
-
-All tests must pass for PR to be mergeable.
-
-## Coverage
-
-Run tests with coverage:
-
-```bash
-cd hooks
-bun run test:coverage
+// pre-tool-use expected (allow)
+{
+  "permissionDecision": "allow"
+}
 ```
 
-Coverage reports generated in `hooks/coverage/`.
+## Cross-Platform Testing
+
+All tests run on three platforms in CI:
+- **ubuntu-latest** - Primary Linux testing
+- **windows-latest** - Windows path handling (EC001)
+- **macos-latest** - macOS compatibility
+
+## Version Validation
+
+CI validates version consistency:
+
+```bash
+# Extract versions from all files
+PLUGIN_VERSION=$(jq -r '.version' .claude-plugin/plugin.json)
+PACKAGE_VERSION=$(jq -r '.version' hooks/package.json)
+CHANGELOG_VERSION=$(grep -m1 '## \[' CHANGELOG.md | sed 's/.*\[\([^]]*\)\].*/\1/')
+
+# Fail if any mismatch
+if [ "$PLUGIN_VERSION" != "$PACKAGE_VERSION" ] || [ "$PLUGIN_VERSION" != "$CHANGELOG_VERSION" ]; then
+  echo "Version mismatch detected"
+  exit 1
+fi
+```

@@ -1,3 +1,12 @@
-.claude/hooks/bun.lock
+# Local settings and state
 .claude/settings.local.json
 .claude/state/
+
+# Old hooks location (backward compatibility junction)
+.claude/hooks/handlers
+.claude/hooks/node_modules/
+.claude/hooks/bun.lock
+.claude/hooks/logs/
+
+# Test output logs
+dist/logs/
