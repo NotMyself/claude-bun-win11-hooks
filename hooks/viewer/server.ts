@@ -1,9 +1,9 @@
 /**
  * HTTP server for the realtime log viewer
  *
- * Implements F019: HTTP server base with routes for:
- * - GET / - HTML page with Vue.js app
- * - GET /styles/theme.css - CSS theme file
+ * Serves React app with routes for:
+ * - GET / - HTML page with React app
+ * - Static files from dist/ directory
  * - GET /api/entries - JSON array of log entries
  * - GET /events - SSE stream for realtime updates
  * - POST /shutdown - Authenticated shutdown endpoint
@@ -19,8 +19,9 @@
 import { getViewerConfig, type ViewerConfig } from './config';
 import { RateLimiter, verifyBearerToken } from './security';
 import { watch } from 'fs';
+import { existsSync } from 'fs';
 import { readFile } from 'fs/promises';
-import { join } from 'path';
+import { join, extname } from 'path';
 
 /**
  * Viewer server class using Bun.serve
@@ -84,15 +85,7 @@ export class ViewerServer {
     const url = new URL(req.url);
     const path = url.pathname;
 
-    // Route handling
-    if (path === '/' && req.method === 'GET') {
-      return this.handleGetIndex();
-    }
-
-    if (path === '/styles/theme.css' && req.method === 'GET') {
-      return this.handleGetTheme();
-    }
-
+    // API route handling
     if (path === '/api/entries' && req.method === 'GET') {
       return this.handleGetEntries();
     }
@@ -105,43 +98,81 @@ export class ViewerServer {
       return this.handleShutdown(req);
     }
 
+    // Static file serving for GET requests
+    if (req.method === 'GET') {
+      // Try serving static files from dist/
+      const distPath = join(import.meta.dir, 'dist');
+
+      // Remove leading slash for file path
+      const requestPath = path === '/' ? 'index.html' : path.substring(1);
+      const filePath = join(distPath, requestPath);
+
+      // Security check: ensure no path traversal
+      if (!filePath.includes('..') && existsSync(filePath)) {
+        try {
+          const content = await readFile(filePath);
+          const mimeType = this.getMimeType(extname(filePath));
+
+          // Add security headers for HTML files
+          const headers: HeadersInit = {
+            'Content-Type': mimeType,
+          };
+
+          if (mimeType === 'text/html') {
+            headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:";
+            headers['X-Content-Type-Options'] = 'nosniff';
+            headers['X-Frame-Options'] = 'DENY';
+          }
+
+          return new Response(content, { headers });
+        } catch (error) {
+          // File exists but can't be read, try SPA fallback
+        }
+      }
+
+      // SPA fallback: serve index.html for all other GET requests
+      const indexPath = join(distPath, 'index.html');
+      if (existsSync(indexPath)) {
+        const html = await readFile(indexPath, 'utf-8');
+        return new Response(html, {
+          headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+            'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:",
+            'X-Content-Type-Options': 'nosniff',
+            'X-Frame-Options': 'DENY',
+          },
+        });
+      }
+    }
+
     // 404 for unknown routes
     return new Response('Not Found', { status: 404 });
   }
 
   /**
-   * Handle GET / - Return HTML page
+   * Get MIME type from file extension
    *
-   * @returns HTML response with security headers
+   * @param ext - File extension (including dot)
+   * @returns MIME type string
    */
-  private handleGetIndex(): Response {
-    const html = this.getHTMLTemplate();
-
-    return new Response(html, {
-      status: 200,
-      headers: {
-        'Content-Type': 'text/html; charset=utf-8',
-        'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' cdn.jsdelivr.net",
-        'X-Content-Type-Options': 'nosniff',
-        'X-Frame-Options': 'DENY',
-      },
-    });
-  }
-
-  /**
-   * Handle GET /styles/theme.css - Return CSS theme
-   *
-   * @returns CSS response
-   */
-  private handleGetTheme(): Response {
-    const css = this.getCSSTheme();
-
-    return new Response(css, {
-      status: 200,
-      headers: {
-        'Content-Type': 'text/css; charset=utf-8',
-      },
-    });
+  private getMimeType(ext: string): string {
+    const types: Record<string, string> = {
+      '.html': 'text/html',
+      '.js': 'application/javascript',
+      '.css': 'text/css',
+      '.json': 'application/json',
+      '.png': 'image/png',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.gif': 'image/gif',
+      '.svg': 'image/svg+xml',
+      '.ico': 'image/x-icon',
+      '.woff': 'font/woff',
+      '.woff2': 'font/woff2',
+      '.ttf': 'font/ttf',
+      '.eot': 'application/vnd.ms-fontobject',
+    };
+    return types[ext] || 'application/octet-stream';
   }
 
   /**
@@ -339,117 +370,6 @@ export class ViewerServer {
     }
   }
 
-  /**
-   * Get HTML template for the viewer UI
-   *
-   * @returns HTML string
-   */
-  private getHTMLTemplate(): string {
-    return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Claude Hall Monitor</title>
-  <link rel="stylesheet" href="/styles/theme.css">
-  <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
-</head>
-<body>
-  <div id="app">
-    <h1>Claude Hall Monitor</h1>
-    <div class="entries">
-      <div v-for="entry in entries" :key="entry.timestamp" class="entry">
-        <pre>{{ JSON.stringify(entry, null, 2) }}</pre>
-      </div>
-    </div>
-  </div>
-  <script>
-    const { createApp } = Vue;
-
-    createApp({
-      data() {
-        return {
-          entries: []
-        };
-      },
-      mounted() {
-        // Connect to SSE endpoint
-        const eventSource = new EventSource('/events');
-
-        eventSource.addEventListener('entries', (e) => {
-          this.entries = JSON.parse(e.data);
-        });
-
-        eventSource.addEventListener('error', (e) => {
-          console.error('SSE error:', e);
-        });
-      }
-    }).mount('#app');
-  </script>
-</body>
-</html>`;
-  }
-
-  /**
-   * Get CSS theme
-   *
-   * @returns CSS string
-   */
-  private getCSSTheme(): string {
-    return `:root {
-  --primary: #6366f1;
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --border: #334155;
-  --shadow: rgba(0, 0, 0, 0.5);
-}
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  line-height: 1.6;
-  padding: 20px;
-}
-
-h1 {
-  color: var(--primary);
-  margin-bottom: 20px;
-  font-size: 2rem;
-}
-
-.entries {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.entry {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 15px;
-  box-shadow: 0 2px 4px var(--shadow);
-}
-
-.entry pre {
-  color: var(--text-secondary);
-  font-family: 'Courier New', monospace;
-  font-size: 0.9rem;
-  overflow-x: auto;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-}
-`;
-  }
 }
 
 /**
