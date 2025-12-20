@@ -135,9 +135,10 @@ export function getModelPricing(model: string): {
   detectedTier?: 'opus' | 'sonnet' | 'haiku' | 'default';
 } {
   // Exact match
-  if (MODEL_PRICING[model]) {
+  const exactMatch = MODEL_PRICING[model];
+  if (exactMatch) {
     return {
-      pricing: MODEL_PRICING[model],
+      pricing: exactMatch,
       isFallback: false,
     };
   }
@@ -154,8 +155,10 @@ export function getModelPricing(model: string): {
     tier = 'haiku';
   }
 
+  // Fallback pricing always exists because tier is one of the known keys
+  const fallbackPricing = FALLBACK_TIERS[tier]!;
   return {
-    pricing: FALLBACK_TIERS[tier],
+    pricing: fallbackPricing,
     isFallback: true,
     detectedTier: tier,
   };

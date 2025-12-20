@@ -46,7 +46,7 @@ describe('Database', () => {
       db.insertMetric(metric);
       const results = db.query({});
       expect(results).toHaveLength(1);
-      expect(results[0].id).toBe('test-1');
+      expect(results[0]!.id).toBe('test-1');
     });
   });
 
@@ -68,10 +68,10 @@ describe('Database', () => {
       const results = db.query({ session_id: 'session-1' });
 
       expect(results).toHaveLength(1);
-      expect(results[0].id).toBe('metric-1');
-      expect(results[0].event_type).toBe('session_started');
-      expect(results[0].data).toEqual({ message: 'Session started' });
-      expect(results[0].tags).toEqual(['session', 'start']);
+      expect(results[0]!.id).toBe('metric-1');
+      expect(results[0]!.event_type).toBe('session_started');
+      expect(results[0]!.data).toEqual({ message: 'Session started' });
+      expect(results[0]!.tags).toEqual(['session', 'start']);
     });
 
     test('inserts metric with optional token and cost fields', () => {
@@ -105,9 +105,9 @@ describe('Database', () => {
       const results = db.query({ event_type: 'api_call' });
 
       expect(results).toHaveLength(1);
-      expect(results[0].model).toBe('claude-opus-4-5');
-      expect(results[0].tokens).toEqual(metric.tokens);
-      expect(results[0].cost).toEqual(metric.cost);
+      expect(results[0]!.model).toBe('claude-opus-4-5');
+      expect(results[0]!.tokens).toEqual(metric.tokens);
+      expect(results[0]!.cost).toEqual(metric.cost);
     });
 
     test('inserts metric with tool execution fields', () => {
@@ -130,9 +130,9 @@ describe('Database', () => {
       const results = db.query({ event_type: 'tool_executed' });
 
       expect(results).toHaveLength(1);
-      expect(results[0].tool_name).toBe('Read');
-      expect(results[0].tool_duration_ms).toBe(125);
-      expect(results[0].tool_success).toBe(true);
+      expect(results[0]!.tool_name).toBe('Read');
+      expect(results[0]!.tool_duration_ms).toBe(125);
+      expect(results[0]!.tool_success).toBe(true);
     });
 
     test('handles tool_success false correctly', () => {
@@ -155,7 +155,7 @@ describe('Database', () => {
       const results = db.query({ event_type: 'tool_failed' });
 
       expect(results).toHaveLength(1);
-      expect(results[0].tool_success).toBe(false);
+      expect(results[0]!.tool_success).toBe(false);
     });
   });
 
@@ -345,7 +345,7 @@ describe('Database', () => {
     test('query returns results sorted by timestamp DESC', () => {
       const results = db.query({});
       for (let i = 0; i < results.length - 1; i++) {
-        expect(results[i].timestamp >= results[i + 1].timestamp).toBe(true);
+        expect(results[i]!.timestamp >= results[i + 1]!.timestamp).toBe(true);
       }
     });
   });
