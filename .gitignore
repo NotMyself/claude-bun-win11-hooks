@@ -10,3 +10,6 @@
 
 # Test output logs
 dist/logs/
+hooks/data/metrics.db
+hooks/data/metrics.db-shm
+hooks/data/metrics.db-wal
